@@ -1,178 +1,324 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>SkyTrace — Live Flight Tracker</title>
-
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet" />
-
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet"/>
 <style>
-  :root {
-    --bg:     #080c14;
-    --panel:  #0d1422;
-    --border: #1a2740;
-    --accent: #00d4ff;
-    --green:  #00ff9d;
-    --warn:   #ffb347;
-    --text:   #c8ddf5;
-    --dim:    #4a6080;
-    --mono:   'Share Tech Mono', monospace;
-    --sans:   'Barlow', sans-serif;
-    --cond:   'Barlow Condensed', sans-serif;
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
-  body { display: flex; flex-direction: column; }
+:root{
+  --bg:#070b13; --panel:#0b1120; --panel2:#0e1628;
+  --b1:#18243a; --b2:#1f2e48;
+  --cyan:#00d4ff; --green:#00ff9d; --amber:#ffb347; --red:#ff4f6a;
+  --txt:#bdd3f0; --dim:#3d5475; --dimm:#5a7299;
+  --mono:'Share Tech Mono',monospace;
+  --sans:'Barlow',sans-serif;
+  --cond:'Barlow Condensed',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--sans)}
+body{display:flex;flex-direction:column}
 
-  /* HEADER */
-  header {
-    height: 52px; background: var(--panel); border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 16px; padding: 0 18px;
-    flex-shrink: 0; position: relative; z-index: 1000;
-  }
-  .logo { display: flex; align-items: center; gap: 9px; flex-shrink: 0; }
-  .logo svg { width: 26px; height: 26px; }
-  .logo-text { font-family: var(--cond); font-weight: 700; font-size: 1.2rem; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); }
-  .logo-text em { color: var(--text); font-style: normal; }
+/* ── HEADER ── */
+header{
+  height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
+  display:flex;align-items:center;gap:14px;padding:0 16px;
+  flex-shrink:0;z-index:1000;position:relative;
+}
+.logo{display:flex;align-items:center;gap:8px;flex-shrink:0;user-select:none}
+.logo-icon{width:28px;height:28px}
+.logo-name{font-family:var(--cond);font-weight:700;font-size:1.15rem;
+  letter-spacing:3px;text-transform:uppercase;color:var(--cyan)}
+.logo-name span{color:var(--txt)}
+.hdr-div{width:1px;height:22px;background:var(--b1);flex-shrink:0}
 
-  .search-wrap { position: relative; flex: 1; max-width: 340px; }
-  .s-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--dim); pointer-events: none; display: flex; }
-  #searchInput {
-    width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 4px;
-    color: var(--text); font-family: var(--mono); font-size: .82rem; letter-spacing: 1.5px;
-    padding: 7px 32px 7px 34px; outline: none; transition: border-color .2s; text-transform: uppercase;
-  }
-  #searchInput::placeholder { color: var(--dim); }
-  #searchInput:focus { border-color: var(--accent); }
-  #clearBtn { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--dim); cursor: pointer; font-size: .9rem; display: none; padding: 2px 4px; line-height: 1; }
-  #clearBtn:hover { color: var(--accent); }
+/* search */
+.srch{position:relative;flex:1;max-width:320px}
+.srch-ico{position:absolute;left:10px;top:50%;transform:translateY(-50%);
+  color:var(--dim);pointer-events:none;display:flex;align-items:center}
+#sInput{
+  width:100%;background:var(--bg);border:1px solid var(--b1);
+  border-radius:4px;color:var(--txt);font-family:var(--mono);
+  font-size:.8rem;letter-spacing:1.5px;padding:7px 30px 7px 32px;
+  outline:none;transition:border-color .2s;text-transform:uppercase
+}
+#sInput::placeholder{color:var(--dim)}
+#sInput:focus{border-color:var(--cyan)}
+#sClear{
+  position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  background:none;border:none;color:var(--dim);cursor:pointer;
+  font-size:.85rem;display:none;padding:2px 4px;line-height:1
+}
+#sClear:hover{color:var(--cyan)}
 
-  .hdr-stats { display: flex; gap: 20px; margin-left: auto; align-items: center; }
-  .stat { font-family: var(--mono); font-size: .7rem; color: var(--dim); white-space: nowrap; }
-  .stat b { color: var(--text); }
-  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: glow 1.6s ease-in-out infinite; flex-shrink: 0; }
-  @keyframes glow { 0%,100%{box-shadow:0 0 0 0 rgba(0,255,157,.5);} 50%{box-shadow:0 0 0 5px rgba(0,255,157,0);} }
+/* stats */
+.hdr-stats{display:flex;gap:18px;margin-left:auto;align-items:center}
+.hstat{font-family:var(--mono);font-size:.68rem;color:var(--dim);white-space:nowrap}
+.hstat b{color:var(--txt)}
+.live-pill{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.18);
+  border-radius:20px;padding:3px 10px;
+  font-family:var(--cond);font-size:.72rem;font-weight:600;
+  letter-spacing:1.5px;color:var(--green)
+}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(0,255,157,.5)}
+  50%{box-shadow:0 0 0 4px rgba(0,255,157,0)}}
 
-  #refreshBtn {
-    background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--dim);
-    cursor: pointer; padding: 5px 11px; font-family: var(--mono); font-size: .7rem; letter-spacing: 1px;
-    display: flex; align-items: center; gap: 6px; transition: all .2s; flex-shrink: 0;
-  }
-  #refreshBtn:hover { border-color: var(--accent); color: var(--accent); }
-  #refreshBtn.loading svg { animation: spin .7s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
+/* refresh */
+#rfBtn{
+  background:none;border:1px solid var(--b1);border-radius:4px;
+  color:var(--dim);cursor:pointer;padding:5px 11px;
+  font-family:var(--mono);font-size:.68rem;letter-spacing:1px;
+  display:flex;align-items:center;gap:5px;transition:all .2s;flex-shrink:0
+}
+#rfBtn:hover{border-color:var(--cyan);color:var(--cyan)}
+#rfBtn.spin svg{animation:rot .6s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
 
-  /* LAYOUT */
-  .layout { display: flex; flex: 1; overflow: hidden; position: relative; }
-  #map { flex: 1; }
-  .leaflet-tile-pane { filter: brightness(.5) saturate(.4) hue-rotate(195deg); }
-  .leaflet-control-zoom a { background: var(--panel) !important; color: var(--accent) !important; border-color: var(--border) !important; }
-  .leaflet-control-attribution { background: rgba(8,12,20,.85) !important; color: var(--dim) !important; font-size: .62rem !important; }
-  .leaflet-control-attribution a { color: var(--dim) !important; }
+/* ── LAYOUT ── */
+.wrap{display:flex;flex:1;overflow:hidden;position:relative}
 
-  /* MAP BADGES */
-  .mbadge { position: absolute; z-index: 900; pointer-events: none; background: rgba(13,20,34,.88); border: 1px solid var(--border); border-radius: 4px; padding: 7px 13px; font-family: var(--mono); font-size: .7rem; color: var(--dim); }
-  #cntBadge { bottom: 12px; left: 12px; }
-  #cntBadge span { color: var(--accent); }
-  #errBadge { top: 12px; left: 50%; transform: translateX(-50%); color: var(--warn); border-color: rgba(255,179,71,.3); display: none; }
+/* ── MAP ── */
+#map{flex:1;position:relative}
 
-  /* LOADER */
-  #loader { position: absolute; inset: 0; z-index: 500; background: rgba(8,12,20,.8); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; transition: opacity .4s; }
-  #loader.gone { opacity: 0; pointer-events: none; }
-  .ring { width: 38px; height: 38px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .8s linear infinite; }
-  .loader-lbl { font-family: var(--mono); font-size: .73rem; letter-spacing: 2px; color: var(--dim); }
+/* custom radar crosshair cursor */
+.leaflet-container{
+  cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='8' stroke='%2300d4ff' stroke-width='1.2' fill='none' opacity='.9'/%3E%3Cline x1='16' y1='2' x2='16' y2='11' stroke='%2300d4ff' stroke-width='1.2' opacity='.9'/%3E%3Cline x1='16' y1='21' x2='16' y2='30' stroke='%2300d4ff' stroke-width='1.2' opacity='.9'/%3E%3Cline x1='2' y1='16' x2='11' y2='16' stroke='%2300d4ff' stroke-width='1.2' opacity='.9'/%3E%3Cline x1='21' y1='16' x2='30' y2='16' stroke='%2300d4ff' stroke-width='1.2' opacity='.9'/%3E%3Ccircle cx='16' cy='16' r='1.5' fill='%2300d4ff'/%3E%3C/svg%3E") 16 16,crosshair
+}
+.leaflet-grab,.leaflet-dragging .leaflet-grab{
+  cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='8' stroke='%2300d4ff' stroke-width='1.2' fill='none' opacity='.9'/%3E%3Cline x1='16' y1='2' x2='16' y2='11' stroke='%2300d4ff' stroke-width='1.2' opacity='.9'/%3E%3Cline x1='16' y1='21' x2='16' y2='30' stroke='%2300d4ff' stroke-width='1.2' opacity='.9'/%3E%3Cline x1='2' y1='16' x2='11' y2='16' stroke='%2300d4ff' stroke-width='1.2' opacity='.9'/%3E%3Cline x1='21' y1='16' x2='30' y2='16' stroke='%2300d4ff' stroke-width='1.2' opacity='.9'/%3E%3Ccircle cx='16' cy='16' r='1.5' fill='%2300d4ff'/%3E%3C/svg%3E") 16 16,crosshair
+}
+.leaflet-tile-pane{filter:brightness(.48) saturate(.4) hue-rotate(196deg)}
+.leaflet-control-zoom a{background:var(--panel)!important;color:var(--cyan)!important;border-color:var(--b1)!important}
+.leaflet-control-attribution{background:rgba(7,11,19,.85)!important;color:var(--dim)!important;font-size:.6rem!important}
+.leaflet-control-attribution a{color:var(--dim)!important}
+.leaflet-marker-icon{transition:transform .35s ease}
 
-  /* SIDE PANEL */
-  #panel { width: 310px; flex-shrink: 0; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transition: width .28s ease; }
-  #panel.shut { width: 0; }
+/* map overlays */
+.mbadge{
+  position:absolute;z-index:900;pointer-events:none;
+  background:rgba(11,17,32,.9);border:1px solid var(--b1);
+  border-radius:4px;padding:6px 12px;
+  font-family:var(--mono);font-size:.68rem;color:var(--dim)
+}
+#cntBadge{bottom:10px;left:10px}
+#cntBadge b{color:var(--cyan)}
+#srcBadge{bottom:10px;left:50%;transform:translateX(-50%);color:var(--dimm)}
+#errBadge{
+  top:10px;left:50%;transform:translateX(-50%);
+  color:var(--amber);border-color:rgba(255,179,71,.3);display:none
+}
 
-  .ph { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 28px; text-align: center; gap: 10px; color: var(--dim); }
-  .ph svg { opacity: .2; }
-  .ph h3 { font-family: var(--cond); font-size: .85rem; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
-  .ph p  { font-size: .77rem; line-height: 1.55; }
+/* loader */
+#loader{
+  position:absolute;inset:0;z-index:800;
+  background:rgba(7,11,19,.82);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  transition:opacity .5s
+}
+#loader.gone{opacity:0;pointer-events:none}
+.lring{width:40px;height:40px;border:2px solid var(--b1);border-top-color:var(--cyan);
+  border-radius:50%;animation:rot .9s linear infinite}
+.llbl{font-family:var(--mono);font-size:.72rem;letter-spacing:2px;color:var(--dim)}
 
-  #detail { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+/* ── SIDE PANEL ── */
+#panel{
+  width:330px;flex-shrink:0;
+  background:var(--panel);border-left:1px solid var(--b1);
+  display:flex;flex-direction:column;overflow:hidden;
+  transition:width .28s cubic-bezier(.4,0,.2,1)
+}
+#panel.shut{width:0}
 
-  .ph2 { padding: 11px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-  .ph2-title { font-family: var(--cond); font-size: .72rem; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); }
-  #closeBtn { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 1rem; line-height: 1; transition: color .2s; padding: 2px; }
-  #closeBtn:hover { color: var(--accent); }
+/* placeholder */
+.empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;padding:30px;text-align:center;gap:12px;color:var(--dim)
+}
+.empty svg{opacity:.18}
+.empty h3{font-family:var(--cond);font-size:.85rem;letter-spacing:2px;
+  text-transform:uppercase;margin-top:6px;color:var(--dimm)}
+.empty p{font-size:.76rem;line-height:1.6;max-width:220px}
 
-  .hero { padding: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  #d_cs { font-family: var(--mono); font-size: 1.5rem; letter-spacing: 3px; color: var(--accent); line-height: 1; }
-  #d_sub { font-family: var(--mono); font-size: .68rem; color: var(--dim); margin-top: 3px; letter-spacing: 1.5px; }
-  .badge { display: inline-flex; align-items: center; gap: 5px; margin-top: 9px; padding: 3px 9px; border-radius: 20px; font-family: var(--cond); font-size: .73rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
-  .badge.air { background: rgba(0,212,255,.1);  color: var(--accent); border: 1px solid rgba(0,212,255,.3); }
-  .badge.gnd { background: rgba(255,179,71,.1); color: var(--warn);   border: 1px solid rgba(255,179,71,.3); }
-  .badge.unk { background: rgba(74,96,128,.12); color: var(--dim);    border: 1px solid var(--border); }
+/* detail view */
+#detail{display:none;flex-direction:column;height:100%;overflow:hidden}
 
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); flex-shrink: 0; border-top: 1px solid var(--border); }
-  .cell { background: var(--panel); padding: 12px 14px; }
-  .clbl { font-family: var(--cond); font-size: .65rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); }
-  .cval { font-family: var(--mono); font-size: 1rem; color: var(--text); margin-top: 3px; }
-  .cval .u { font-size: .65rem; color: var(--dim); margin-left: 1px; }
+/* panel top bar */
+.pbar{
+  padding:10px 15px;border-bottom:1px solid var(--b1);
+  display:flex;justify-content:space-between;align-items:center;flex-shrink:0
+}
+.pbar-lbl{font-family:var(--cond);font-size:.7rem;letter-spacing:2px;
+  text-transform:uppercase;color:var(--dim)}
+#closeBtn{
+  background:none;border:none;color:var(--dim);cursor:pointer;
+  font-size:.95rem;line-height:1;padding:2px 4px;transition:color .2s
+}
+#closeBtn:hover{color:var(--cyan)}
 
-  .trk-wrap { padding: 14px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-  #trkBtn { width: 100%; background: rgba(0,212,255,.07); border: 1px solid rgba(0,212,255,.28); border-radius: 4px; color: var(--accent); font-family: var(--cond); font-size: .82rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 9px; cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-  #trkBtn:hover { background: rgba(0,212,255,.16); border-color: var(--accent); }
-  #trkBtn.on { background: rgba(0,255,157,.08); border-color: rgba(0,255,157,.35); color: var(--green); }
-  #trkBtn.on:hover { background: rgba(0,255,157,.15); }
+/* hero */
+.hero{padding:15px;border-bottom:1px solid var(--b1);flex-shrink:0}
+#dCs{font-family:var(--mono);font-size:1.45rem;letter-spacing:3px;color:var(--cyan);line-height:1}
+#dSub{font-family:var(--mono);font-size:.66rem;color:var(--dim);margin-top:3px;letter-spacing:1.5px}
+.badges{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 9px;border-radius:20px;
+  font-family:var(--cond);font-size:.7rem;font-weight:700;
+  letter-spacing:1px;text-transform:uppercase
+}
+.badge.air{background:rgba(0,212,255,.09);color:var(--cyan);border:1px solid rgba(0,212,255,.28)}
+.badge.gnd{background:rgba(255,179,71,.09);color:var(--amber);border:1px solid rgba(255,179,71,.28)}
+.badge.unk{background:rgba(61,84,117,.15);color:var(--dimm);border:1px solid var(--b1)}
+.badge.op{background:rgba(0,255,157,.06);color:var(--green);border:1px solid rgba(0,255,157,.2);font-weight:400}
 
-  .log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-  .log::-webkit-scrollbar { width: 3px; }
-  .log::-webkit-scrollbar-thumb { background: var(--border); }
-  .log-hdr { padding: 10px 16px 7px; font-family: var(--cond); font-size: .67rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--border); flex-shrink: 0; position: sticky; top: 0; background: var(--panel); z-index: 1; }
-  .log-empty { padding: 20px 16px; font-size: .77rem; color: var(--dim); font-style: italic; text-align: center; }
-  .le { padding: 9px 14px; border-bottom: 1px solid rgba(26,39,64,.45); display: flex; gap: 10px; align-items: flex-start; animation: fadein .3s ease; }
-  @keyframes fadein { from{opacity:0;transform:translateX(8px);} to{opacity:1;transform:none;} }
-  .lt { font-family: var(--mono); font-size: .65rem; color: var(--dim); flex-shrink: 0; padding-top: 2px; }
-  .lm { font-size: .79rem; color: var(--text); line-height: 1.4; }
-  .lm.hi { color: var(--green); }
-  .lm.wn { color: var(--warn); }
+/* scrollable body */
+.pscroll{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.pscroll::-webkit-scrollbar{width:3px}
+.pscroll::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
 
-  #toast { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--border); border-radius: 4px; padding: 9px 18px; font-family: var(--mono); font-size: .75rem; color: var(--text); letter-spacing: 1px; opacity: 0; pointer-events: none; transition: opacity .3s; z-index: 9999; }
-  #toast.show { opacity: 1; }
+/* photo */
+.photo-wrap{flex-shrink:0;background:var(--panel2);border-bottom:1px solid var(--b1);position:relative;overflow:hidden}
+#photoImg{width:100%;height:175px;object-fit:cover;display:none;
+  cursor:pointer;transition:opacity .3s}
+#photoImg:hover{opacity:.85}
+.photo-skel{
+  width:100%;height:175px;
+  background:linear-gradient(90deg,var(--b1) 25%,var(--b2) 50%,var(--b1) 75%);
+  background-size:200% 100%;animation:shimmer 1.5s infinite;
+  display:flex;align-items:center;justify-content:center
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.photo-skel-ico{color:var(--dim);opacity:.4}
+.photo-credit{
+  position:absolute;bottom:0;right:0;left:0;
+  background:linear-gradient(transparent,rgba(7,11,19,.9));
+  padding:18px 10px 6px;
+  font-size:.65rem;color:var(--dimm);font-family:var(--mono);
+  display:none
+}
+#photoLink{color:var(--cyan);text-decoration:none}
+#photoLink:hover{text-decoration:underline}
+.no-photo{width:100%;height:100px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:.68rem;color:var(--dim);letter-spacing:1px;display:none}
 
-  @media(max-width:600px) {
-    #panel { position: absolute; right: 0; top: 52px; bottom: 0; z-index: 800; }
-    .hdr-stats { display: none; }
-    .search-wrap { max-width: 180px; }
-  }
+/* route */
+.section{padding:13px 15px;border-bottom:1px solid var(--b1);flex-shrink:0}
+.sec-lbl{font-family:var(--cond);font-size:.68rem;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+.route-row{display:flex;align-items:center;gap:8px}
+.apt{flex:1;text-align:center}
+.apt-code{font-family:var(--mono);font-size:1.3rem;color:var(--txt);letter-spacing:2px}
+.apt-city{font-size:.68rem;color:var(--dim);margin-top:2px;font-family:var(--cond);letter-spacing:1px}
+.route-mid{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.route-line-wrap{width:100%;display:flex;align-items:center;gap:3px}
+.route-dot{width:5px;height:5px;border-radius:50%;background:var(--b2);border:1px solid var(--dimm);flex-shrink:0}
+.route-dash{flex:1;height:1px;background:linear-gradient(90deg,var(--dimm),var(--b2))}
+.route-plane-ico{flex-shrink:0;color:var(--cyan);opacity:.8}
+.route-eta{font-family:var(--mono);font-size:.65rem;color:var(--dimm);letter-spacing:1px}
+
+/* stats grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--b1);flex-shrink:0}
+.cell{background:var(--panel);padding:11px 13px}
+.clbl{font-family:var(--cond);font-size:.63rem;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:var(--dim)}
+.cval{font-family:var(--mono);font-size:.97rem;color:var(--txt);margin-top:3px}
+.cval .u{font-size:.62rem;color:var(--dim);margin-left:1px}
+.cval.sm{font-size:.82rem}
+.cval .up{color:var(--green)}.cval .dn{color:var(--amber)}
+
+/* track button */
+.trk-sec{padding:12px 15px;border-bottom:1px solid var(--b1);flex-shrink:0}
+#trkBtn{
+  width:100%;background:rgba(0,212,255,.06);
+  border:1px solid rgba(0,212,255,.25);border-radius:4px;
+  color:var(--cyan);font-family:var(--cond);font-size:.8rem;
+  font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  padding:9px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:7px
+}
+#trkBtn:hover{background:rgba(0,212,255,.14);border-color:var(--cyan)}
+#trkBtn.on{background:rgba(0,255,157,.07);border-color:rgba(0,255,157,.3);color:var(--green)}
+#trkBtn.on:hover{background:rgba(0,255,157,.14)}
+
+/* log */
+.log{flex:1;display:flex;flex-direction:column;min-height:0}
+.log-hdr{
+  padding:9px 15px 7px;font-family:var(--cond);font-size:.65rem;
+  font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--dim);
+  border-bottom:1px solid var(--b1);flex-shrink:0;
+  position:sticky;top:0;background:var(--panel);z-index:1
+}
+.log-empty{padding:18px 15px;font-size:.75rem;color:var(--dim);font-style:italic;text-align:center}
+.le{
+  padding:8px 13px;border-bottom:1px solid rgba(24,36,58,.5);
+  display:flex;gap:9px;align-items:flex-start;
+  animation:sldin .3s ease
+}
+@keyframes sldin{from{opacity:0;transform:translateX(6px)}to{opacity:1;transform:none}}
+.lt{font-family:var(--mono);font-size:.63rem;color:var(--dim);flex-shrink:0;padding-top:2px}
+.lm{font-size:.77rem;color:var(--txt);line-height:1.4}
+.lm.hi{color:var(--green)}.lm.wn{color:var(--amber)}.lm.em{color:var(--red)}
+
+/* toast */
+#toast{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:var(--panel);border:1px solid var(--b1);border-radius:4px;
+  padding:8px 18px;font-family:var(--mono);font-size:.72rem;
+  color:var(--txt);letter-spacing:1px;opacity:0;pointer-events:none;
+  transition:opacity .3s;z-index:9999;white-space:nowrap
+}
+#toast.show{opacity:1}
+
+/* aircraft marker pulse for selected */
+.ac-selected{animation:acpulse 2s ease-in-out infinite}
+@keyframes acpulse{
+  0%,100%{filter:drop-shadow(0 0 3px #00ff9d)}
+  50%{filter:drop-shadow(0 0 8px #00ff9d)}
+}
+
+@media(max-width:620px){
+  #panel{position:absolute;right:0;top:52px;bottom:0;z-index:800;width:min(330px,100vw)}
+  .hdr-stats{display:none}
+  .srch{max-width:160px}
+}
 </style>
 </head>
 <body>
 
+<!-- ── HEADER ── -->
 <header>
   <div class="logo">
-    <svg viewBox="0 0 26 26" fill="none">
-      <path d="M13 3L21 17H5L13 3Z" stroke="#00d4ff" stroke-width="1.5" fill="none"/>
-      <circle cx="13" cy="17" r="2.5" fill="#00d4ff" opacity=".35"/>
-      <line x1="13" y1="19.5" x2="13" y2="24" stroke="#00d4ff" stroke-width="1.5"/>
-      <line x1="7" y1="21" x2="19" y2="21" stroke="#00d4ff" stroke-width="1.5"/>
+    <svg class="logo-icon" viewBox="0 0 28 28" fill="none">
+      <path d="M14 3L20 16H8L14 3Z" stroke="#00d4ff" stroke-width="1.4" fill="rgba(0,212,255,.08)"/>
+      <line x1="14" y1="16" x2="14" y2="22" stroke="#00d4ff" stroke-width="1.4"/>
+      <line x1="9" y1="20" x2="19" y2="20" stroke="#00d4ff" stroke-width="1.4"/>
+      <circle cx="14" cy="16" r="2" fill="#00d4ff" opacity=".3"/>
     </svg>
-    <div class="logo-text">Sky<em>Trace</em></div>
+    <div class="logo-name">Sky<span>Trace</span></div>
   </div>
-
-  <div class="search-wrap">
-    <span class="s-icon">
+  <div class="hdr-div"></div>
+  <div class="srch">
+    <span class="srch-ico">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
         <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
       </svg>
     </span>
-    <input id="searchInput" type="text" placeholder="CALLSIGN / HEX…" maxlength="12" autocomplete="off" spellcheck="false" />
-    <button id="clearBtn">✕</button>
+    <input id="sInput" type="text" placeholder="CALLSIGN / REG / HEX…" maxlength="12" autocomplete="off" spellcheck="false"/>
+    <button id="sClear">✕</button>
   </div>
-
   <div class="hdr-stats">
-    <div class="live-dot"></div>
-    <div class="stat">AIRCRAFT&nbsp;<b id="acCount">—</b></div>
-    <div class="stat">UPDATED&nbsp;<b id="lastUpd">—</b></div>
+    <div class="live-pill"><div class="live-dot"></div>LIVE</div>
+    <div class="hstat">VISIBLE&nbsp;<b id="hAc">—</b></div>
+    <div class="hstat">UPDATED&nbsp;<b id="hTime">—</b></div>
+    <div class="hstat" id="hSrc" style="color:var(--dim)"></div>
   </div>
-
-  <button id="refreshBtn">
+  <button id="rfBtn">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
       <polyline points="23 4 23 10 17 10"/>
       <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -181,267 +327,606 @@
   </button>
 </header>
 
-<div class="layout">
+<div class="wrap">
 
+  <!-- MAP -->
   <div id="map">
-    <div id="loader">
-      <div class="ring"></div>
-      <div class="loader-lbl">ACQUIRING AIRCRAFT…</div>
-    </div>
-    <div class="mbadge" id="cntBadge">Showing <span id="visCnt">0</span> aircraft</div>
-    <div class="mbadge" id="errBadge">⚠ API temporarily unavailable — retrying…</div>
+    <div id="loader"><div class="lring"></div><div class="llbl">ACQUIRING AIRCRAFT…</div></div>
+    <div class="mbadge" id="cntBadge">Showing <b id="visCnt">0</b> aircraft</div>
+    <div class="mbadge" id="srcBadge" style="display:none"></div>
+    <div class="mbadge" id="errBadge">⚠ Retrying connection…</div>
   </div>
 
+  <!-- SIDE PANEL -->
   <div id="panel" class="shut">
-    <div class="ph" id="placeholder">
-      <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-        <path d="M28 8L46 42H10L28 8Z" stroke="#4a6080" stroke-width="1.8" fill="none"/>
-        <line x1="28" y1="42" x2="28" y2="50" stroke="#4a6080" stroke-width="1.8"/>
-        <line x1="19" y1="47" x2="37" y2="47" stroke="#4a6080" stroke-width="1.8"/>
-        <circle cx="28" cy="42" r="3.5" stroke="#4a6080" stroke-width="1.8" fill="none"/>
+
+    <!-- Empty state -->
+    <div class="empty" id="emptyState">
+      <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+        <g opacity=".5">
+          <path d="M30 10L38 30H22L30 10Z" stroke="#3d5475" stroke-width="1.6" fill="none"/>
+          <line x1="30" y1="30" x2="30" y2="42" stroke="#3d5475" stroke-width="1.6"/>
+          <line x1="22" y1="38" x2="38" y2="38" stroke="#3d5475" stroke-width="1.6"/>
+          <circle cx="30" cy="30" r="3.5" stroke="#3d5475" stroke-width="1.6" fill="none"/>
+          <circle cx="30" cy="30" r="12" stroke="#1f2e48" stroke-width="1" stroke-dasharray="3 3"/>
+        </g>
       </svg>
       <h3>No Flight Selected</h3>
-      <p>Click any aircraft on the map or search by callsign to view details and track in real time.</p>
+      <p>Click any aircraft on the map, or search by callsign to view live details, photos and track the flight.</p>
     </div>
 
+    <!-- Detail view -->
     <div id="detail">
-      <div class="ph2">
-        <span class="ph2-title">Flight Details</span>
-        <button id="closeBtn">✕</button>
-      </div>
-      <div class="hero">
-        <div id="d_cs">————</div>
-        <div id="d_sub">HEX: ———— · REG: ————</div>
-        <div id="d_badge" class="badge unk">● Unknown</div>
-      </div>
-      <div class="grid">
-        <div class="cell"><div class="clbl">Altitude</div><div class="cval" id="d_alt">—<span class="u">ft</span></div></div>
-        <div class="cell"><div class="clbl">Speed</div><div class="cval" id="d_spd">—<span class="u">kn</span></div></div>
-        <div class="cell"><div class="clbl">Heading</div><div class="cval" id="d_hdg">—<span class="u">°</span></div></div>
-        <div class="cell"><div class="clbl">Vert. Rate</div><div class="cval" id="d_vr">—<span class="u">fpm</span></div></div>
-        <div class="cell"><div class="clbl">Aircraft</div><div class="cval" id="d_type" style="font-size:.85rem">—</div></div>
-        <div class="cell"><div class="clbl">Squawk</div><div class="cval" id="d_sqk">—</div></div>
-      </div>
-      <div class="trk-wrap">
-        <button id="trkBtn">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
-          </svg>
-          TRACK THIS FLIGHT
-        </button>
-      </div>
-      <div class="log">
-        <div class="log-hdr">Track Log</div>
-        <div class="log-empty" id="logEmpty">Start tracking to receive live updates.</div>
-        <div id="logEntries"></div>
-      </div>
-    </div>
-  </div>
 
+      <div class="pbar">
+        <span class="pbar-lbl">Flight Details</span>
+        <button id="closeBtn" title="Close panel">✕</button>
+      </div>
+
+      <!-- Callsign hero -->
+      <div class="hero">
+        <div id="dCs">————</div>
+        <div id="dSub">HEX: —— · REG: —— · TYPE: ——</div>
+        <div class="badges" id="dBadges">
+          <div id="badgeStatus" class="badge unk">● Unknown</div>
+          <div id="badgeOp" class="badge op" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Scrollable content -->
+      <div class="pscroll">
+
+        <!-- Photo -->
+        <div class="photo-wrap" id="photoWrap">
+          <div class="photo-skel" id="photoSkel">
+            <svg class="photo-skel-ico" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+              <polyline points="21 15 16 10 5 21"/>
+            </svg>
+          </div>
+          <img id="photoImg" alt="Aircraft photo"/>
+          <div class="photo-credit" id="photoCredit">
+            Photo by <a id="photoLink" target="_blank" rel="noopener">—</a> · planespotters.net
+          </div>
+          <div class="no-photo" id="noPhoto">NO PHOTO AVAILABLE</div>
+        </div>
+
+        <!-- Route -->
+        <div class="section" id="routeSection">
+          <div class="sec-lbl">Route</div>
+          <div class="route-row">
+            <div class="apt">
+              <div class="apt-code" id="dFrom">—</div>
+              <div class="apt-city" id="dFromCity"></div>
+            </div>
+            <div class="route-mid">
+              <div class="route-line-wrap">
+                <div class="route-dot"></div>
+                <div class="route-dash"></div>
+                <span class="route-plane-ico">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C12.5 2.8 13 5 13 8.5L22 12L21 13L13 10.5L13 17L16 19L15.5 20L12 18.5L8.5 20L8 19L11 17L11 10.5L3 13L2 12L11 8.5C11 5 11.5 2.8 12 2Z"/>
+                  </svg>
+                </span>
+                <div class="route-dash" style="transform:scaleX(-1)"></div>
+                <div class="route-dot"></div>
+              </div>
+              <div class="route-eta" id="dEta"></div>
+            </div>
+            <div class="apt" style="text-align:right">
+              <div class="apt-code" id="dTo">—</div>
+              <div class="apt-city" id="dToCity"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats grid -->
+        <div class="grid">
+          <div class="cell"><div class="clbl">Altitude</div><div class="cval" id="dAlt">—<span class="u">ft</span></div></div>
+          <div class="cell"><div class="clbl">Ground Speed</div><div class="cval" id="dSpd">—<span class="u">kn</span></div></div>
+          <div class="cell"><div class="clbl">Heading</div><div class="cval" id="dHdg">—<span class="u">°</span></div></div>
+          <div class="cell"><div class="clbl">Vert. Rate</div><div class="cval" id="dVr">—<span class="u">fpm</span></div></div>
+          <div class="cell"><div class="clbl">Aircraft</div><div class="cval sm" id="dType">—</div></div>
+          <div class="cell"><div class="clbl">Squawk</div><div class="cval" id="dSqk">—</div></div>
+        </div>
+
+        <!-- Track button -->
+        <div class="trk-sec">
+          <button id="trkBtn">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            TRACK THIS FLIGHT
+          </button>
+        </div>
+
+        <!-- Log -->
+        <div class="log">
+          <div class="log-hdr">Track Log</div>
+          <div class="log-empty" id="logEmpty">Start tracking to receive live status updates.</div>
+          <div id="logEntries"></div>
+        </div>
+
+      </div><!-- /pscroll -->
+    </div><!-- /detail -->
+  </div><!-- /panel -->
 </div>
+
 <div id="toast"></div>
 
 <script>
-/*
-  SkyTrace v2 — Live Flight Tracker
-  API: airplanes.live  (free, no key, CORS-enabled)
-  https://airplanes.live/api-access/
-  Map: Leaflet + OpenStreetMap
-*/
+/* ════════════════════════════════════════════════════
+   SkyTrace v3 — Dual-API · Photos · Route · Tracking
+   APIs: airplanes.live (primary) + adsb.fi (fallback)
+   Photos: planespotters.net (free, no key, CORS OK)
+   ════════════════════════════════════════════════════ */
 
-const API_BASE  = 'https://api.airplanes.live/v2';
-const REFRESH   = 15000;   // ms between full map refreshes
-const TRACK_INT = 10000;   // ms between track polls
+// ── CONFIG ──────────────────────────────────────────
+const APIV2   = 'https://api.airplanes.live/v2';
+const APIFI   = 'https://api.adsb.fi/v1';
+const PHOTOA  = 'https://api.planespotters.net/pub/photos/hex/';
+const TIMEOUT = 9000;
+const REFRESH = 16000;  // map refresh every 16s
+const TRKINT  = 11000;  // track poll every 11s
 
+// Airline ICAO prefix → name
+const AIRLINES = {
+  AAL:'American Airlines',ACA:'Air Canada',AFR:'Air France',
+  AIC:'Air India',ANA:'All Nippon Airways',AUA:'Austrian Airlines',
+  AXM:'AirAsia',AZA:'ITA Airways',AZU:'Azul Brazilian',
+  BAW:'British Airways',BCS:'European Air Charter',BEL:'Brussels Airlines',
+  BWA:'Caribbean Airlines',CAL:'China Airlines',CCA:'Air China',
+  CLX:'Cargolux',CPH:'Cobham Aviation',CPA:'Cathay Pacific',
+  CSN:'China Southern',DAL:'Delta Air Lines',DHL:'DHL Aviation',
+  DLH:'Lufthansa',DY:'Norwegian',EIN:'Aer Lingus',ETD:'Etihad Airways',
+  ETH:'Ethiopian Airlines',EVA:'EVA Air',EXS:'Jet2',EZY:'easyJet',
+  FDX:'FedEx Express',FIN:'Finnair',GAR:'Garuda Indonesia',
+  GFA:'Gulf Air',GOL:'GOL Linhas Aéreas',GTI:'Atlas Air',
+  HVN:'Vietnam Airlines',IBE:'Iberia',ICE:'Icelandair',
+  JAL:'Japan Airlines',KLM:'KLM Royal Dutch Airlines',
+  LAN:'LATAM Airlines',LOT:'LOT Polish Airlines',
+  MAS:'Malaysia Airlines',MOV:'Air Mobility Command',
+  NOZ:'Norwegian',PAL:'Philippine Airlines',PIA:'Pakistan International',
+  QFA:'Qantas',QTR:'Qatar Airways',ROT:'TAROM',
+  RYR:'Ryanair',SAS:'Scandinavian Airlines',SIA:'Singapore Airlines',
+  SVA:'Saudia',SWA:'Southwest Airlines',TAM:'LATAM Brasil',
+  TAP:'TAP Air Portugal',THA:'Thai Airways',THY:'Turkish Airlines',
+  TOM:'TUI Airways',TUI:'TUI Airways',UAL:'United Airlines',
+  UAE:'Emirates',UPS:'UPS Airlines',VLG:'Vueling',
+  VOZ:'Virgin Australia',WJA:'WestJet',WZZ:'Wizz Air',
+  WUK:'Wizz Air UK',
+};
+
+// Airport IATA → city name
+const AIRPORTS = {
+  LHR:'London',LGW:'London Gatwick',STN:'London Stansted',LTN:'London Luton',
+  JFK:'New York JFK',EWR:'Newark',LGA:'New York LaGuardia',
+  LAX:'Los Angeles',SFO:'San Francisco',SEA:'Seattle',ORD:'Chicago',
+  ATL:'Atlanta',DFW:'Dallas',MIA:'Miami',BOS:'Boston',DEN:'Denver',
+  LAS:'Las Vegas',PHX:'Phoenix',IAH:'Houston',IAD:'Washington DC',
+  DCA:'Washington Reagan',MSP:'Minneapolis',DTW:'Detroit',PHL:'Philadelphia',
+  CLT:'Charlotte',MCO:'Orlando',SLC:'Salt Lake City',PDX:'Portland',
+  HNL:'Honolulu',ANC:'Anchorage',
+  CDG:'Paris Charles de Gaulle',ORY:'Paris Orly',
+  AMS:'Amsterdam',FRA:'Frankfurt',MUC:'Munich',DUS:'Düsseldorf',
+  HAM:'Hamburg',TXL:'Berlin Tegel',BER:'Berlin Brandenburg',
+  VIE:'Vienna',ZRH:'Zurich',GVA:'Geneva',BSL:'Basel',
+  FCO:'Rome Fiumicino',MXP:'Milan Malpensa',LIN:'Milan Linate',
+  MAD:'Madrid',BCN:'Barcelona',AGP:'Málaga',PMI:'Palma de Mallorca',
+  VLC:'Valencia',SVQ:'Seville',
+  LIS:'Lisbon',OPO:'Porto',
+  BRU:'Brussels',CPH:'Copenhagen',ARN:'Stockholm',OSL:'Oslo',
+  HEL:'Helsinki',WAW:'Warsaw',PRG:'Prague',BUD:'Budapest',
+  OTP:'Bucharest',SOF:'Sofia',ATH:'Athens',SKG:'Thessaloniki',
+  IST:'Istanbul',SAW:'Istanbul Sabiha',AYT:'Antalya',
+  DXB:'Dubai',AUH:'Abu Dhabi',DOH:'Doha',KWI:'Kuwait City',
+  BAH:'Bahrain',MCT:'Muscat',
+  SIN:'Singapore',KUL:'Kuala Lumpur',BKK:'Bangkok',
+  HKG:'Hong Kong',PEK:'Beijing Capital',PKX:'Beijing Daxing',
+  PVG:'Shanghai Pudong',SHA:'Shanghai Hongqiao',
+  ICN:'Seoul Incheon',GMP:'Seoul Gimpo',
+  NRT:'Tokyo Narita',HND:'Tokyo Haneda',
+  SYD:'Sydney',MEL:'Melbourne',BNE:'Brisbane',PER:'Perth',ADL:'Adelaide',
+  AKL:'Auckland',CHC:'Christchurch',
+  YYZ:'Toronto',YVR:'Vancouver',YUL:'Montreal',YYC:'Calgary',YEG:'Edmonton',
+  GRU:'São Paulo',CGH:'São Paulo Congonhas',GIG:'Rio de Janeiro',
+  EZE:'Buenos Aires',SCL:'Santiago',BOG:'Bogotá',LIM:'Lima',
+  UIO:'Quito',MVD:'Montevideo',ASU:'Asunción',
+  JNB:'Johannesburg',CPT:'Cape Town',CAI:'Cairo',CMN:'Casablanca',
+  NBO:'Nairobi',ADD:'Addis Ababa',LOS:'Lagos',ACC:'Accra',
+  DEL:'New Delhi',BOM:'Mumbai',BLR:'Bangalore',MAA:'Chennai',HYD:'Hyderabad',
+  DAC:'Dhaka',CMB:'Colombo',KTM:'Kathmandu',
+  SVO:'Moscow Sheremetyevo',DME:'Moscow Domodedovo',LED:'St Petersburg',
+  KBP:'Kyiv Boryspil',WAW:'Warsaw',
+};
+
+// ── STATE ───────────────────────────────────────────
 let map, cache = {}, markers = {};
 let selHex = null, trkHex = null;
-let refreshTimer = null, trackTimer = null;
-let lastTrkState = null;
-let searchQ = '';
+let refreshTmr = null, trackTmr = null, lastTrkSt = null;
+let searchQ = '', apiSource = '', errCount = 0;
 
-// ─── MAP ──────────────────────────────────
+// ── MAP INIT ────────────────────────────────────────
 function initMap() {
-  map = L.map('map', { center: [48, 12], zoom: 5 });
+  map = L.map('map', { center:[48, 12], zoom:5, zoomControl:true });
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 18,
+    attribution:'© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom:18
   }).addTo(map);
   map.on('moveend', debounce(load, 700));
 }
 
-// ─── ICON ─────────────────────────────────
-function mkIcon(hdg, selected, ground) {
-  const col  = selected ? '#00ff9d' : ground ? '#ffb347' : '#00d4ff';
-  const sz   = selected ? 22 : 15;
-  const glow = selected ? `filter:drop-shadow(0 0 5px ${col})` : '';
+// ── AIRCRAFT ICON ────────────────────────────────────
+// Realistic top-down aircraft silhouette as SVG
+function mkIcon(hdg, selected, ground, emergency) {
+  const col = emergency ? '#ff4f6a'
+             : selected ? '#00ff9d'
+             : ground   ? '#ffb347'
+             : '#00d4ff';
+  const sz  = selected ? 28 : 18;
+  const op  = ground ? 0.65 : 1;
+  const glow= selected ? `filter:drop-shadow(0 0 7px ${col})` : '';
+  // Multi-element realistic top-down aircraft
+  const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 32 32"
+    xmlns="http://www.w3.org/2000/svg" style="${glow}">
+    <g fill="${col}" opacity="${op}">
+      <!-- Fuselage -->
+      <ellipse cx="16" cy="16" rx="2.2" ry="12"/>
+      <!-- Nose cone -->
+      <ellipse cx="16" cy="5.5" rx="2.2" ry="3.5"/>
+      <!-- Right main wing -->
+      <path d="M17.8 13 L30 18.5 L28.5 20 L17.8 16.5 Z"/>
+      <!-- Left main wing -->
+      <path d="M14.2 13 L2 18.5 L3.5 20 L14.2 16.5 Z"/>
+      <!-- Right horizontal stabilizer -->
+      <path d="M17.5 24.5 L24 27.5 L23.5 28.5 L16 26 Z"/>
+      <!-- Left horizontal stabilizer -->
+      <path d="M14.5 24.5 L8 27.5 L8.5 28.5 L16 26 Z"/>
+    </g>
+    ${selected ? `<circle cx="16" cy="16" r="14" stroke="${col}" stroke-width="1" fill="none" opacity=".25"/>` : ''}
+  </svg>`;
+
   return L.divIcon({
-    html: `<div style="transform:rotate(${hdg||0}deg);${glow};line-height:0">
-      <svg width="${sz}" height="${sz}" viewBox="0 0 24 24">
-        <path d="M12 2L16 10H20L18 12H14L15 20H13L12 17L11 20H9L10 12H6L4 10H8Z"
-              fill="${col}" opacity="${ground ? 0.55 : 1}"/>
-      </svg></div>`,
-    className: '', iconSize: [sz,sz], iconAnchor: [sz/2,sz/2],
+    html: `<div style="transform:rotate(${hdg||0}deg);transform-origin:center;line-height:0;display:inline-block">${svg}</div>`,
+    className: selected ? 'ac-selected' : '',
+    iconSize:   [sz, sz],
+    iconAnchor: [sz/2, sz/2],
   });
 }
 
-// ─── API CALLS ────────────────────────────
-async function apiFetch(url) {
-  try {
-    const r = await fetch(url, { signal: AbortSignal.timeout(8000) });
-    if (!r.ok) throw new Error(r.status);
-    return await r.json();
-  } catch(e) { console.warn('API:', e.message); return null; }
+// ── API ─────────────────────────────────────────────
+function timeoutFetch(url, ms) {
+  return Promise.race([
+    fetch(url),
+    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))
+  ]);
 }
 
-// Load aircraft for current map viewport
 async function fetchView() {
-  const c   = map.getCenter();
-  const b   = map.getBounds();
-  const nmi = Math.min(
+  const c  = map.getCenter();
+  const b  = map.getBounds();
+  const r  = Math.min(
     Math.round(L.latLng(b.getNorth(), b.getWest())
-              .distanceTo(L.latLng(b.getSouth(), b.getEast())) / 1852 / 2),
+               .distanceTo(L.latLng(b.getSouth(), b.getEast())) / 1852 / 2),
     250
   );
-  const d = await apiFetch(
-    `${API_BASE}/point/${c.lat.toFixed(4)}/${c.lng.toFixed(4)}/${nmi}`
-  );
-  return d?.ac || null;
+  const lat = c.lat.toFixed(4), lon = c.lng.toFixed(4);
+
+  // 1) Try airplanes.live
+  try {
+    const res = await timeoutFetch(`${APIV2}/point/${lat}/${lon}/${r}`, TIMEOUT);
+    if (res.ok) {
+      const d = await res.json();
+      if (Array.isArray(d?.ac)) {
+        apiSource = 'airplanes.live'; errCount = 0;
+        return d.ac;
+      }
+    }
+  } catch(e) { /* fall through */ }
+
+  // 2) Fallback: adsb.fi
+  try {
+    const res = await timeoutFetch(`${APIFI}/lat/${lat}/lon/${lon}/dist/${r}`, TIMEOUT);
+    if (res.ok) {
+      const d = await res.json();
+      if (Array.isArray(d?.ac)) {
+        apiSource = 'adsb.fi'; errCount = 0;
+        return d.ac;
+      }
+    }
+  } catch(e) { /* fall through */ }
+
+  errCount++;
+  return null;
 }
 
-// Single aircraft by ICAO hex
 async function fetchOne(hex) {
-  const d = await apiFetch(`${API_BASE}/icao/${hex}`);
-  return d?.ac?.[0] || null;
+  // Try airplanes.live
+  try {
+    const res = await timeoutFetch(`${APIV2}/icao/${hex}`, TIMEOUT);
+    if (res.ok) { const d = await res.json(); if (d?.ac?.[0]) return d.ac[0]; }
+  } catch(e) {}
+  // Fallback adsb.fi
+  try {
+    const res = await timeoutFetch(`${APIFI}/icao/${hex}`, TIMEOUT);
+    if (res.ok) { const d = await res.json(); if (d?.ac?.[0]) return d.ac[0]; }
+  } catch(e) {}
+  return null;
 }
 
-// Search by callsign
-async function fetchCallsign(cs) {
-  const d = await apiFetch(`${API_BASE}/callsign/${encodeURIComponent(cs.toUpperCase())}`);
-  return d?.ac || null;
+async function fetchByCallsign(cs) {
+  try {
+    const res = await timeoutFetch(`${APIV2}/callsign/${encodeURIComponent(cs.toUpperCase())}`, TIMEOUT);
+    if (res.ok) { const d = await res.json(); if (Array.isArray(d?.ac)) return d.ac; }
+  } catch(e) {}
+  return null;
 }
 
-// ─── RENDER ───────────────────────────────
+// Photo from planespotters.net — free, no key, CORS enabled
+async function fetchPhoto(hex) {
+  try {
+    const res = await timeoutFetch(`${PHOTOA}${hex.toLowerCase()}`, 8000);
+    if (!res.ok) return null;
+    const d = await res.json();
+    if (d?.photos?.length > 0) return d.photos[0];
+  } catch(e) {}
+  return null;
+}
+
+// ── RENDER ──────────────────────────────────────────
 function renderAll(acList) {
-  if (!acList) { errBadge(true); return; }
-  errBadge(false);
+  if (!acList) {
+    showErr(true);
+    // Update status badge
+    document.getElementById('hSrc').textContent = 'OFFLINE';
+    return;
+  }
+  showErr(false);
+  document.getElementById('hSrc').textContent = apiSource ? `via ${apiSource}` : '';
 
   const seen = new Set();
   let vis = 0;
 
-  acList.forEach(ac => {
-    if (ac.lat == null || ac.lon == null) return;
+  for (const ac of acList) {
+    if (ac.lat == null || ac.lon == null) continue;
     const cs = (ac.flight || ac.hex || '').trim().toUpperCase();
-    if (searchQ && !cs.includes(searchQ) && !ac.hex.includes(searchQ.toLowerCase())) return;
+    if (searchQ && !cs.includes(searchQ) && !ac.hex.toUpperCase().includes(searchQ)
+        && !(ac.r||'').toUpperCase().includes(searchQ)) continue;
 
     seen.add(ac.hex);
     cache[ac.hex] = ac;
     vis++;
 
     const isSel = ac.hex === selHex;
-    const icon  = mkIcon(ac.track, isSel, !!ac.on_ground);
+    const emerg = ac.emergency && ac.emergency !== 'none';
+    const icon  = mkIcon(ac.track, isSel, !!ac.on_ground, emerg);
 
     if (markers[ac.hex]) {
       markers[ac.hex].setLatLng([ac.lat, ac.lon]).setIcon(icon);
     } else {
-      markers[ac.hex] = L.marker([ac.lat, ac.lon], { icon, zIndexOffset: isSel ? 1000 : 0 })
-        .addTo(map)
-        .on('click', () => selectAc(ac.hex));
-    }
-  });
+      const tip = L.tooltip({
+        permanent:false, direction:'top', className:'',
+        offset:[0,-8], opacity:0.9
+      }).setContent(`<span style="font-family:'Share Tech Mono',monospace;font-size:.72rem;color:#00d4ff;background:#0b1120;border:1px solid #18243a;padding:2px 7px;border-radius:3px;letter-spacing:1.5px">${cs}</span>`);
 
-  // prune non-visible (but keep selected/tracked)
-  Object.keys(markers).forEach(h => {
+      markers[ac.hex] = L.marker([ac.lat, ac.lon], {
+        icon, zIndexOffset: isSel ? 1000 : 0
+      })
+      .addTo(map)
+      .bindTooltip(tip)
+      .on('click', () => selectAc(ac.hex));
+    }
+  }
+
+  // Prune old markers (keep selected + tracked in view)
+  for (const h of Object.keys(markers)) {
     if (!seen.has(h) && h !== selHex && h !== trkHex) {
       map.removeLayer(markers[h]);
       delete markers[h];
-      delete cache[h];
     }
-  });
+  }
 
-  document.getElementById('acCount').textContent = vis.toLocaleString();
-  document.getElementById('visCnt').textContent  = vis.toLocaleString();
-  document.getElementById('lastUpd').textContent =
-    new Date().toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  document.getElementById('hAc').textContent    = vis.toLocaleString();
+  document.getElementById('visCnt').textContent = vis.toLocaleString();
+  document.getElementById('hTime').textContent  = new Date().toLocaleTimeString([],
+    { hour:'2-digit', minute:'2-digit', second:'2-digit' });
 }
 
-// ─── SELECT ───────────────────────────────
+// ── SELECT ──────────────────────────────────────────
 function selectAc(hex) {
+  // Reset old marker
   if (selHex && selHex !== hex && markers[selHex] && cache[selHex]) {
     const o = cache[selHex];
-    markers[selHex].setIcon(mkIcon(o.track, false, !!o.on_ground));
+    markers[selHex].setIcon(mkIcon(o.track, false, !!o.on_ground, false));
+    markers[selHex].setZIndexOffset(0);
   }
   selHex = hex;
   const ac = cache[hex];
   if (!ac) return;
   if (markers[hex]) {
-    markers[hex].setIcon(mkIcon(ac.track, true, !!ac.on_ground));
+    markers[hex].setIcon(mkIcon(ac.track, true, !!ac.on_ground, ac.emergency && ac.emergency!=='none'));
     markers[hex].setZIndexOffset(1000);
   }
-  map.panTo([ac.lat, ac.lon], { animate: true, duration: .5 });
+  map.panTo([ac.lat, ac.lon], { animate:true, duration:.5 });
   openPanel(ac);
 }
 
-// ─── PANEL ────────────────────────────────
+// ── PANEL ───────────────────────────────────────────
 function openPanel(ac) {
-  document.getElementById('placeholder').style.display = 'none';
+  document.getElementById('emptyState').style.display = 'none';
   const dv = document.getElementById('detail');
   dv.style.display = 'flex';
   document.getElementById('panel').classList.remove('shut');
   fillPanel(ac);
+  loadPhoto(ac.hex);
 }
 
 function fillPanel(ac) {
-  const cs  = (ac.flight || '').trim().toUpperCase() || ac.hex?.toUpperCase() || '—';
-  document.getElementById('d_cs').textContent  = cs;
-  document.getElementById('d_sub').textContent =
-    `HEX: ${(ac.hex||'—').toUpperCase()} · REG: ${ac.r || '—'}`;
+  const cs   = (ac.flight || '').trim().toUpperCase() || ac.hex?.toUpperCase() || '—';
+  const reg  = ac.r  || '—';
+  const type = ac.t  || '—';
+  const desc = ac.desc || '';
 
-  const badge = document.getElementById('d_badge');
-  if (ac.on_ground) {
-    badge.className = 'badge gnd'; badge.textContent = '● On Ground';
+  document.getElementById('dCs').textContent  = cs;
+  document.getElementById('dSub').textContent =
+    `HEX: ${(ac.hex||'—').toUpperCase()} · REG: ${reg} · TYPE: ${type}`;
+
+  // Status badge
+  const bSt = document.getElementById('badgeStatus');
+  if (ac.emergency && ac.emergency !== 'none') {
+    bSt.className = 'badge'; bSt.style.background='rgba(255,79,106,.1)';
+    bSt.style.color='#ff4f6a'; bSt.style.borderColor='rgba(255,79,106,.3)';
+    bSt.textContent = '⚠ EMERGENCY';
+  } else if (ac.on_ground) {
+    bSt.className = 'badge gnd'; bSt.style = '';
+    bSt.textContent = '● On Ground';
   } else if (ac.alt_baro != null || ac.alt_geom != null) {
-    badge.className = 'badge air'; badge.textContent = '✈ Airborne';
+    bSt.className = 'badge air'; bSt.style = '';
+    bSt.textContent = '✈ Airborne';
   } else {
-    badge.className = 'badge unk'; badge.textContent = '● Unknown';
+    bSt.className = 'badge unk'; bSt.style = '';
+    bSt.textContent = '● Unknown';
   }
 
+  // Operator badge
+  const bOp = document.getElementById('badgeOp');
+  const airline = getAirline(ac);
+  if (airline) {
+    bOp.style.display = '';
+    bOp.textContent = airline;
+  } else {
+    bOp.style.display = 'none';
+  }
+
+  // Route
+  fillRoute(ac);
+
+  // Stats
   const alt = ac.alt_baro ?? ac.alt_geom;
-  document.getElementById('d_alt').innerHTML  = alt != null ? Math.round(alt).toLocaleString() + '<span class="u">ft</span>' : '—<span class="u">ft</span>';
-  document.getElementById('d_spd').innerHTML  = ac.gs   != null ? Math.round(ac.gs) + '<span class="u">kn</span>'    : '—<span class="u">kn</span>';
-  document.getElementById('d_hdg').innerHTML  = ac.track != null ? Math.round(ac.track) + '<span class="u">°</span>'  : '—<span class="u">°</span>';
-  document.getElementById('d_vr').innerHTML   = ac.baro_rate != null ? ac.baro_rate + '<span class="u">fpm</span>'     : '—<span class="u">fpm</span>';
-  document.getElementById('d_type').textContent = ac.t || '—';
-  document.getElementById('d_sqk').textContent  = ac.squawk || '—';
+  const vr  = ac.baro_rate ?? null;
+  document.getElementById('dAlt').innerHTML = alt != null
+    ? `${Math.round(alt).toLocaleString()}<span class="u">ft</span>`
+    : `—<span class="u">ft</span>`;
+  document.getElementById('dSpd').innerHTML = ac.gs != null
+    ? `${Math.round(ac.gs)}<span class="u">kn</span>`
+    : `—<span class="u">kn</span>`;
+  document.getElementById('dHdg').innerHTML = ac.track != null
+    ? `${Math.round(ac.track)}<span class="u">°</span>`
+    : `—<span class="u">°</span>`;
+
+  let vrHtml = `—<span class="u">fpm</span>`;
+  if (vr != null) {
+    const cls = vr > 100 ? 'up' : vr < -100 ? 'dn' : '';
+    const arrow = vr > 100 ? '↑' : vr < -100 ? '↓' : '→';
+    vrHtml = `<span class="${cls}">${arrow}${Math.abs(Math.round(vr))}</span><span class="u">fpm</span>`;
+  }
+  document.getElementById('dVr').innerHTML = vrHtml;
+  document.getElementById('dType').textContent = desc || type;
+  document.getElementById('dSqk').textContent  = ac.squawk || '—';
+}
+
+function fillRoute(ac) {
+  const orig = ac.orig_iata || ac.orig || null;
+  const dest = ac.dest_iata || ac.dest || null;
+
+  document.getElementById('dFrom').textContent    = orig || '—';
+  document.getElementById('dFromCity').textContent = orig ? (AIRPORTS[orig] || '') : '';
+  document.getElementById('dTo').textContent      = dest || '—';
+  document.getElementById('dToCity').textContent  = dest ? (AIRPORTS[dest] || '') : '';
+
+  // ETA estimate based on descent
+  const eta = document.getElementById('dEta');
+  if (!ac.on_ground && ac.gs && ac.baro_rate && ac.alt_baro) {
+    const vr = ac.baro_rate; // fpm
+    if (vr < -200 && ac.alt_baro > 0) {
+      const minsToLand = Math.round(ac.alt_baro / Math.abs(vr));
+      if (minsToLand > 0 && minsToLand < 120) {
+        eta.textContent = `~${minsToLand} min to land`;
+        return;
+      }
+    }
+    if (!ac.baro_rate || Math.abs(ac.baro_rate) < 200) {
+      eta.textContent = 'Cruising';
+      return;
+    }
+    if (vr > 200) { eta.textContent = 'Climbing'; return; }
+  }
+  eta.textContent = '';
+}
+
+function getAirline(ac) {
+  if (ac.ownOp) return ac.ownOp;
+  const cs = (ac.flight || '').trim();
+  if (cs.length >= 3) {
+    const a3 = cs.substring(0,3).toUpperCase();
+    const a2 = cs.substring(0,2).toUpperCase();
+    return AIRLINES[a3] || AIRLINES[a2] || null;
+  }
+  return null;
+}
+
+// ── PHOTO ───────────────────────────────────────────
+async function loadPhoto(hex) {
+  // Reset photo area
+  const img  = document.getElementById('photoImg');
+  const skel = document.getElementById('photoSkel');
+  const cred = document.getElementById('photoCredit');
+  const noph = document.getElementById('noPhoto');
+  img.style.display = 'none';
+  cred.style.display = 'none';
+  noph.style.display = 'none';
+  skel.style.display = 'flex';
+
+  const photo = await fetchPhoto(hex);
+
+  // Check still selected (user may have switched)
+  if (selHex !== hex) return;
+
+  skel.style.display = 'none';
+
+  if (photo && (photo.thumbnail_large?.src || photo.thumbnail?.src)) {
+    const src = photo.thumbnail_large?.src || photo.thumbnail?.src;
+    img.src = src;
+    img.style.display = 'block';
+    img.onclick = () => window.open(photo.link, '_blank');
+
+    document.getElementById('photoLink').href = photo.link || '#';
+    document.getElementById('photoLink').textContent = photo.photographer || 'Unknown';
+    cred.style.display = 'block';
+  } else {
+    noph.style.display = 'flex';
+  }
 }
 
 function closePanel() {
   document.getElementById('panel').classList.add('shut');
   if (selHex && markers[selHex] && cache[selHex]) {
     const o = cache[selHex];
-    markers[selHex].setIcon(mkIcon(o.track, false, !!o.on_ground));
+    markers[selHex].setIcon(mkIcon(o.track, false, !!o.on_ground, false));
+    markers[selHex].setZIndexOffset(0);
   }
   selHex = null;
   stopTrack();
   document.getElementById('detail').style.display = 'none';
-  document.getElementById('placeholder').style.display = 'flex';
+  document.getElementById('emptyState').style.display = 'flex';
 }
 
-// ─── TRACKING ─────────────────────────────
+// ── TRACKING ────────────────────────────────────────
 function startTrack(hex) {
   stopTrack();
   trkHex = hex;
-  lastTrkState = null;
+  lastTrkSt = null;
   document.getElementById('logEntries').innerHTML = '';
   document.getElementById('logEmpty').style.display = 'none';
   setTrkBtn(true);
-  const label = (cache[hex]?.flight || hex).trim().toUpperCase();
-  addLog(`Tracking ${label}`, 'hi');
-  trackTimer = setInterval(pollTrack, TRACK_INT);
+  const lbl = (cache[hex]?.flight || hex).trim().toUpperCase();
+  addLog(`Tracking ${lbl}`, 'hi');
+  trackTmr = setInterval(pollTrack, TRKINT);
   pollTrack();
 }
 
 function stopTrack() {
-  clearInterval(trackTimer); trackTimer = null; trkHex = null;
+  clearInterval(trackTmr); trackTmr = null; trkHex = null;
   setTrkBtn(false);
 }
 
@@ -449,44 +934,54 @@ function setTrkBtn(on) {
   const b = document.getElementById('trkBtn');
   b.className = on ? 'on' : '';
   b.innerHTML = on
-    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><rect x="9" y="9" width="6" height="6" fill="currentColor" stroke="none"/></svg> STOP TRACKING`
+    ? `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="8" height="8" rx="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="10"/></svg> STOP TRACKING`
     : `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> TRACK THIS FLIGHT`;
 }
 
 async function pollTrack() {
   if (!trkHex) return;
   const ac = await fetchOne(trkHex);
-  if (!ac) { addLog('No signal — out of coverage.', 'wn'); return; }
-
-  cache[ac.hex] = ac;
-  if (selHex === ac.hex) fillPanel(ac);
-  if (markers[ac.hex]) {
-    markers[ac.hex].setLatLng([ac.lat, ac.lon]).setIcon(mkIcon(ac.track, true, !!ac.on_ground));
+  if (!ac) {
+    addLog('No signal — aircraft may be out of ADS-B coverage.', 'wn');
+    return;
   }
 
-  const prev = lastTrkState;
+  cache[ac.hex] = ac;
+
+  // Update panel if selected
+  if (selHex === ac.hex) fillPanel(ac);
+
+  // Update marker
+  if (markers[ac.hex]) {
+    markers[ac.hex].setLatLng([ac.lat, ac.lon])
+      .setIcon(mkIcon(ac.track, selHex === ac.hex, !!ac.on_ground, false));
+  }
+
+  // Log state changes
+  const prev = lastTrkSt;
   if (prev) {
-    if (prev.on_ground && !ac.on_ground)
-      addLog('✈ Departed — now airborne', 'hi');
-    else if (!prev.on_ground && ac.on_ground)
-      addLog('🛬 Landed — on ground', 'hi');
-    else if (!ac.on_ground) {
-      const vr = ac.baro_rate ?? 0;
+    const wasGround = prev.on_ground, isGround = ac.on_ground;
+    if (wasGround && !isGround)        addLog('✈ Departed — now airborne!', 'hi');
+    else if (!wasGround && isGround)   addLog('🛬 Landed — on ground.', 'hi');
+    else if (!isGround) {
+      const vr  = ac.baro_rate ?? 0;
       const alt = Math.round(ac.alt_baro ?? 0).toLocaleString();
       const spd = Math.round(ac.gs ?? 0);
-      if      (vr >  200) addLog(`↑ Climbing · ${alt} ft`);
-      else if (vr < -200) addLog(`↓ Descending · ${alt} ft`);
-      else                addLog(`→ Cruising · ${spd} kn · ${alt} ft`);
+      const em  = ac.emergency && ac.emergency !== 'none';
+      if (em) addLog(`⚠ EMERGENCY declared: ${ac.emergency}`, 'em');
+      else if (vr >  300) addLog(`↑ Climbing · ${alt} ft · ${spd} kn`);
+      else if (vr < -300) addLog(`↓ Descending · ${alt} ft · ${spd} kn`);
+      else                addLog(`→ Cruising · ${alt} ft · ${spd} kn`);
     } else {
-      addLog('On ground · Squawk ' + (ac.squawk || '—'));
+      addLog(`On ground · Squawk ${ac.squawk || '—'}`);
     }
   } else {
     const alt = Math.round(ac.alt_baro ?? 0).toLocaleString();
     addLog(ac.on_ground
       ? `On ground · Squawk ${ac.squawk || '—'}`
-      : `Airborne · ${alt} ft · ${Math.round(ac.gs ?? 0)} kn`);
+      : `Airborne · ${alt} ft · ${Math.round(ac.gs??0)} kn`);
   }
-  lastTrkState = { ...ac };
+  lastTrkSt = { ...ac };
 }
 
 function addLog(msg, cls = '') {
@@ -497,76 +992,90 @@ function addLog(msg, cls = '') {
   d.innerHTML = `<span class="lt">${t}</span><span class="lm ${cls}">${msg}</span>`;
   document.getElementById('logEntries').prepend(d);
   const el = document.getElementById('logEntries');
-  while (el.children.length > 60) el.lastChild.remove();
+  while (el.children.length > 80) el.lastChild.remove();
 }
 
-// ─── SEARCH ───────────────────────────────
-document.getElementById('searchInput').addEventListener('input', async e => {
+// ── SEARCH ──────────────────────────────────────────
+let searchDebounce = null;
+document.getElementById('sInput').addEventListener('input', e => {
   searchQ = e.target.value.trim().toUpperCase();
-  document.getElementById('clearBtn').style.display = searchQ ? 'block' : 'none';
-
-  if (searchQ.length < 3) return;
-
-  // Check cache first
-  const hit = Object.values(cache).find(a =>
-    (a.flight||'').trim().toUpperCase().includes(searchQ) ||
-    a.hex.toUpperCase().includes(searchQ)
-  );
-  if (hit) { selectAc(hit.hex); return; }
-
-  // API callsign search
-  const res = await fetchCallsign(searchQ);
-  if (res && res.length > 0) {
-    res.forEach(a => { if (a.lat != null) cache[a.hex] = a; });
-    // Add missing markers
-    res.forEach(a => {
-      if (!markers[a.hex] && a.lat != null) {
-        markers[a.hex] = L.marker([a.lat, a.lon], {
-          icon: mkIcon(a.track, false, !!a.on_ground),
-        }).addTo(map).on('click', () => selectAc(a.hex));
-      }
-    });
-    selectAc(res[0].hex);
-    map.flyTo([res[0].lat, res[0].lon], 7, { duration: 1 });
-  }
+  document.getElementById('sClear').style.display = searchQ ? 'block' : 'none';
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(async () => {
+    if (searchQ.length < 2) return;
+    // Check cache
+    const hit = Object.values(cache).find(a =>
+      (a.flight||'').trim().toUpperCase().includes(searchQ) ||
+      a.hex.toUpperCase().includes(searchQ) ||
+      (a.r||'').toUpperCase().includes(searchQ)
+    );
+    if (hit) { selectAc(hit.hex); return; }
+    // API search
+    const res = await fetchByCallsign(searchQ);
+    if (res?.length > 0) {
+      res.forEach(a => { if (a.lat != null) {
+        cache[a.hex] = a;
+        if (!markers[a.hex]) {
+          markers[a.hex] = L.marker([a.lat, a.lon], { icon: mkIcon(a.track, false, !!a.on_ground, false) })
+            .addTo(map).on('click', () => selectAc(a.hex));
+        }
+      }});
+      selectAc(res[0].hex);
+      map.flyTo([res[0].lat, res[0].lon], 8, { duration:1.2 });
+    } else {
+      toast('Flight not found in current coverage area.');
+    }
+  }, 500);
 });
 
-document.getElementById('clearBtn').addEventListener('click', () => {
-  document.getElementById('searchInput').value = '';
+document.getElementById('sClear').addEventListener('click', () => {
+  document.getElementById('sInput').value = '';
   searchQ = '';
-  document.getElementById('clearBtn').style.display = 'none';
+  document.getElementById('sClear').style.display = 'none';
 });
 
-// ─── WIRING ───────────────────────────────
+// ── EVENTS ──────────────────────────────────────────
 document.getElementById('closeBtn').addEventListener('click', closePanel);
+
 document.getElementById('trkBtn').addEventListener('click', () => {
   if (!selHex) return;
   trkHex === selHex ? stopTrack() : startTrack(selHex);
 });
-document.getElementById('refreshBtn').addEventListener('click', async () => {
-  const b = document.getElementById('refreshBtn');
-  b.classList.add('loading'); await load(); b.classList.remove('loading');
+
+document.getElementById('rfBtn').addEventListener('click', async () => {
+  const b = document.getElementById('rfBtn');
+  b.classList.add('spin'); await load(); b.classList.remove('spin');
 });
 
-// ─── HELPERS ──────────────────────────────
-function errBadge(show) {
+// ── UTILS ───────────────────────────────────────────
+function showErr(show) {
   document.getElementById('errBadge').style.display = show ? 'block' : 'none';
 }
+
+function toast(msg, ms=2800) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
 function debounce(fn, ms) {
   let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); };
 }
 
-// ─── MAIN LOOP ────────────────────────────
+// ── MAIN LOOP ────────────────────────────────────────
 async function load() {
   const ac = await fetchView();
   renderAll(ac);
   document.getElementById('loader').classList.add('gone');
+  if (!ac) {
+    if (errCount <= 2) toast('Connecting to flight data…');
+  }
 }
 
 async function boot() {
   initMap();
   await load();
-  refreshTimer = setInterval(load, REFRESH);
+  refreshTmr = setInterval(load, REFRESH);
 }
 
 boot();
