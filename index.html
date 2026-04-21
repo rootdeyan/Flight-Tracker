@@ -418,6 +418,15 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
    Photos: planespotters.net
    ═══════════════════════════════════════════════════════════ */
 
+// ── HELPERS (must be first — used throughout) ───────────────
+const qs = s => document.querySelector(s);
+function showErr(v){ qs('#errB').style.display = v ? 'flex' : 'none'; }
+function toast(msg, ms=2800){
+  const t=qs('#toast'); t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), ms);
+}
+function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+
 // ── CONSTANTS ───────────────────────────────────────────────
 const REFRESH  = 15000;
 const TRK_INT  = 10000;
@@ -971,14 +980,7 @@ qs('#rfBtn').addEventListener('click',async()=>{
   await load(); b.classList.remove('spin');
 });
 
-// ── HELPERS ──────────────────────────────────────────────────
-const qs=s=>document.querySelector(s);
-function showErr(v){ qs('#errB').style.display=v?'flex':'none'; }
-function toast(msg,ms=2800){
-  const t=qs('#toast'); t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),ms);
-}
-function debounce(fn,ms){ let t; return(...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
+
 
 // ── MAIN LOOP ────────────────────────────────────────────────
 async function load(){
