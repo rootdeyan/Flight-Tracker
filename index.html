@@ -590,17 +590,23 @@ function mkIcon(hdg, sel, gnd, emg){
 }
 
 // ── API LAYER ────────────────────────────────────────────────
-// Timed fetch — rejects after ms
-function tf(url, ms=FETCH_MS){
-  return Promise.race([
-    fetch(url,{headers:{'Accept':'application/json'}}),
-    new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),ms))
-  ]);
-}
+// AbortController-based fetch with hard timeout — guaranteed to resolve
 async function getJSON(url, ms=FETCH_MS){
-  const r = await tf(url, ms);
-  if(!r.ok) throw new Error('HTTP '+r.status);
-  return r.json();
+  const ctrl = new AbortController();
+  const tid  = setTimeout(()=>ctrl.abort(), ms);
+  try{
+    const r = await fetch(url,{
+      signal: ctrl.signal,
+      headers:{'Accept':'application/json'},
+      credentials:'omit', mode:'cors'
+    });
+    clearTimeout(tid);
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return await r.json();
+  } catch(e){
+    clearTimeout(tid);
+    throw e;
+  }
 }
 
 // Normalize readsb-format ac array (airplanes.live / adsb.fi / adsb.lol)
@@ -643,52 +649,42 @@ function normFR24(raw, src){
   return out;
 }
 
-// ── FETCH ALL (parallel race) ────────────────────────────────
+// ── FETCH ALL (parallel race with hard timeout) ─────────────
 async function fetchView(){
-  const c=map.getCenter(), b=map.getBounds();
-  const lat=c.lat.toFixed(3), lon=c.lng.toFixed(3);
+  const cent=map.getCenter(), b=map.getBounds();
+  const lat=cent.lat.toFixed(3), lon=cent.lng.toFixed(3);
   const nmi=Math.min(Math.round(
     L.latLng(b.getNorth(),b.getWest())
      .distanceTo(L.latLng(b.getSouth(),b.getEast()))/1852/2),250);
   const N=b.getNorth().toFixed(2),S=b.getSouth().toFixed(2);
-  const W=b.getWest().toFixed(2), E=b.getEast().toFixed(2);
+  const W=b.getWest().toFixed(2),E=b.getEast().toFixed(2);
+  const fr24url=`https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=${N},${S},${W},${E}&faa=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`;
+
+  const mkAttempt=(p)=>p.then(r=>{ if(!r?.ac?.length) throw 0; return r; });
 
   const attempts=[
-    // FR24 — has FROM/TO route data
-    getJSON(`https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=${N},${S},${W},${E}&faa=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`)
-      .then(d=>{
-        const ac=normFR24(d,'FlightRadar24');
-        if(!ac.length) throw new Error('empty');
-        return {src:'FlightRadar24',ac};
-      }),
-    // airplanes.live
-    getJSON(`https://api.airplanes.live/v2/point/${lat}/${lon}/${nmi}`)
-      .then(d=>{
-        const ac=normADSB(d?.ac,'airplanes.live');
-        if(!ac.length) throw new Error('empty');
-        return {src:'airplanes.live',ac};
-      }),
+    // adsb.lol — most CORS-friendly community aggregator
+    mkAttempt(getJSON(`https://api.adsb.lol/v2/point/${lat}/${lon}/${nmi}`,7000)
+      .then(d=>({src:'adsb.lol',ac:normADSB(d?.ac,'adsb.lol')}))),
     // adsb.fi
-    getJSON(`https://api.adsb.fi/v1/lat/${lat}/lon/${lon}/dist/${nmi}`)
-      .then(d=>{
-        const ac=normADSB(d?.ac,'adsb.fi');
-        if(!ac.length) throw new Error('empty');
-        return {src:'adsb.fi',ac};
-      }),
-    // adsb.lol — another community aggregator
-    getJSON(`https://api.adsb.lol/v2/point/${lat}/${lon}/${nmi}`)
-      .then(d=>{
-        const ac=normADSB(d?.ac,'adsb.lol');
-        if(!ac.length) throw new Error('empty');
-        return {src:'adsb.lol',ac};
-      }),
+    mkAttempt(getJSON(`https://api.adsb.fi/v1/lat/${lat}/lon/${lon}/dist/${nmi}`,7000)
+      .then(d=>({src:'adsb.fi',ac:normADSB(d?.ac,'adsb.fi')}))),
+    // airplanes.live
+    mkAttempt(getJSON(`https://api.airplanes.live/v2/point/${lat}/${lon}/${nmi}`,7000)
+      .then(d=>({src:'airplanes.live',ac:normADSB(d?.ac,'airplanes.live')}))),
+    // FR24 direct (has route data)
+    mkAttempt(getJSON(fr24url,9000)
+      .then(d=>({src:'FlightRadar24',ac:normFR24(d,'FlightRadar24')}))),
+    // FR24 via CORS proxy (fallback for route data)
+    mkAttempt(getJSON(`https://corsproxy.io/?${encodeURIComponent(fr24url)}`,11000)
+      .then(d=>({src:'FR24-proxy',ac:normFR24(d,'FR24-proxy')}))),
   ];
 
-  try {
-    return await Promise.any(attempts);
-  } catch {
-    return null;
-  }
+  // Hard overall timeout — loader will ALWAYS hide within 12s
+  const timeout=new Promise(res=>setTimeout(()=>res(null),12000));
+  try{
+    return await Promise.race([Promise.any(attempts), timeout]);
+  } catch { return null; }
 }
 
 // Fetch single aircraft for tracking
@@ -1101,7 +1097,10 @@ async function mergeFR24Routes(){
   const N=b.getNorth().toFixed(2),S=b.getSouth().toFixed(2);
   const W=b.getWest().toFixed(2),E=b.getEast().toFixed(2);
   try{
-    const d=await getJSON(`https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=${N},${S},${W},${E}&faa=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`, 12000);
+    const fr24u=`https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=${N},${S},${W},${E}&faa=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`;
+    let d;
+    try{ d=await getJSON(fr24u,9000); }
+    catch{ d=await getJSON(`https://corsproxy.io/?${encodeURIComponent(fr24u)}`,12000); }
     const ac=normFR24(d,'FlightRadar24');
     let updated=false;
     for(const a of ac){
@@ -1134,6 +1133,8 @@ async function load(){
 
 async function boot(){
   initMap();
+  // Safety net: hide loader after 13s no matter what
+  setTimeout(()=>qs('#ldr').classList.add('gone'), 13000);
   await load();
   refreshTmr=setInterval(load,REFRESH);
 }
