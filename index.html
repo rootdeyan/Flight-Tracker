@@ -428,7 +428,7 @@ function toast(msg, ms=2800){
 function debounce(fn, ms){ let t; return (...a)=>{ clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; }
 
 // ── CONSTANTS ───────────────────────────────────────────────
-const REFRESH  = 15000;
+const REFRESH  = 10000;
 const TRK_INT  = 10000;
 const FETCH_MS = 8000;
 
@@ -638,15 +638,25 @@ async function fetchView(){
   }
 }
 
-// Fetch single aircraft for tracking (parallel)
+// Fetch single aircraft for tracking — does NOT filter by lat/lon so ground aircraft are included
 async function fetchOne(hex){
+  const norm1=(d,src)=>{
+    const raw=d?.ac?.[0]; if(!raw) throw 0;
+    return {
+      _src:src, hex:raw.hex||hex, flight:(raw.flight||'').trim(),
+      lat:raw.lat??null, lon:raw.lon??null, track:raw.track||0,
+      alt_baro:raw.alt_baro??raw.alt_geom??null, gs:raw.gs??null,
+      baro_rate:raw.baro_rate??null, squawk:raw.squawk||'',
+      t:raw.t||'', r:raw.r||'', desc:raw.desc||'', ownOp:raw.ownOp||'',
+      orig_iata:raw.orig_iata||raw.orig||cache[hex]?.orig_iata||null,
+      dest_iata:raw.dest_iata||raw.dest||cache[hex]?.dest_iata||null,
+      on_ground:!!raw.on_ground, emergency:raw.emergency||null,
+    };
+  };
   const tries=[
-    getJSON(`https://api.airplanes.live/v2/icao/${hex}`)
-      .then(d=>{if(!d?.ac?.[0])throw 0;return normADSB([d.ac[0]],'airplanes.live')[0]}),
-    getJSON(`https://api.adsb.fi/v1/icao/${hex}`)
-      .then(d=>{if(!d?.ac?.[0])throw 0;return normADSB([d.ac[0]],'adsb.fi')[0]}),
-    getJSON(`https://api.adsb.lol/v2/icao/${hex}`)
-      .then(d=>{if(!d?.ac?.[0])throw 0;return normADSB([d.ac[0]],'adsb.lol')[0]}),
+    getJSON(`https://api.airplanes.live/v2/icao/${hex}`).then(d=>norm1(d,'airplanes.live')),
+    getJSON(`https://api.adsb.fi/v1/icao/${hex}`).then(d=>norm1(d,'adsb.fi')),
+    getJSON(`https://api.adsb.lol/v2/icao/${hex}`).then(d=>norm1(d,'adsb.lol')),
   ];
   try{ return await Promise.any(tries); }catch{ return null; }
 }
@@ -982,11 +992,38 @@ qs('#rfBtn').addEventListener('click',async()=>{
 
 
 
+// ── FR24 BACKGROUND ROUTE MERGE ─────────────────────────────
+// Runs after main load — merges origin/dest into cache even if FR24 was slower
+async function mergeFR24Routes(){
+  const b=map.getBounds();
+  const N=b.getNorth().toFixed(2),S=b.getSouth().toFixed(2);
+  const W=b.getWest().toFixed(2),E=b.getEast().toFixed(2);
+  try{
+    const d=await getJSON(`https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=${N},${S},${W},${E}&faa=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`, 12000);
+    const ac=normFR24(d,'FlightRadar24');
+    let updated=false;
+    for(const a of ac){
+      if(!a.hex) continue;
+      // Find matching cached aircraft (FR24 hex may differ in case)
+      const key=Object.keys(cache).find(k=>k===a.hex||k===a.hex.toLowerCase());
+      if(key){
+        if(a.orig_iata&&!cache[key].orig_iata){ cache[key].orig_iata=a.orig_iata; updated=true; }
+        if(a.dest_iata&&!cache[key].dest_iata){ cache[key].dest_iata=a.dest_iata; updated=true; }
+        if(a.ownOp&&!cache[key].ownOp)         cache[key].ownOp=a.ownOp;
+      }
+    }
+    // Refresh panel if selected aircraft got new route data
+    if(updated&&selHex&&cache[selHex]) fillPanel(cache[selHex]);
+  }catch(e){ /* FR24 unavailable — silently skip */ }
+}
+
 // ── MAIN LOOP ────────────────────────────────────────────────
 async function load(){
   const result=await fetchView();
   renderAll(result);
   qs('#ldr').classList.add('gone');
+  // Fire FR24 route merge in background (don't await — non-blocking)
+  mergeFR24Routes();
 }
 
 async function boot(){
