@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>RTDN — AirTrackerFree</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23070b12'/%3E%3Cpath d='M16 4L23 18H9L16 4Z' fill='%2300d4ff' opacity='.85'/%3E%3Ccircle cx='16' cy='19' r='2' fill='%2300d4ff'/%3E%3Cline x1='16' y1='21' x2='16' y2='27' stroke='%2300d4ff' stroke-width='1.6'/%3E%3Cline x1='10.5' y1='25' x2='21.5' y2='25' stroke='%2300d4ff' stroke-width='1.6'/%3E%3C/svg%3E"/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23070b12'/%3E%3Ccircle cx='16' cy='16' r='10.5' stroke='%2300d4ff' stroke-width='1.4' fill='none' opacity='.55'/%3E%3Cpath d='M20 12L14.5 14.5L12 20L17.5 17.5Z' fill='%2300d4ff'/%3E%3Ccircle cx='16' cy='16' r='1.6' fill='%23070b12'/%3E%3C/svg%3E"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
@@ -32,6 +32,8 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
   display:flex;align-items:center;gap:12px;padding:11px 18px;
   flex-shrink:0;z-index:1200}
 .logo{display:flex;align-items:center;gap:9px;flex-shrink:0;user-select:none}
+#logoIco{display:inline-block;animation:sweep 6s linear infinite;filter:drop-shadow(0 0 4px rgba(0,212,255,.5))}
+@keyframes sweep{to{transform:rotate(360deg)}}
 .logo svg{width:26px;height:26px}
 .logo-name{font-family:var(--cond);font-weight:700;font-size:1.15rem;
   letter-spacing:3px;text-transform:uppercase;color:var(--cyan);white-space:nowrap}
@@ -102,7 +104,7 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
 .mb{position:absolute;z-index:900;pointer-events:none;
   background:rgba(11,17,32,.92);border:1px solid var(--b1);border-radius:var(--r-sm);
   padding:6px 11px;font-family:var(--mono);font-size:.67rem;color:var(--dim)}
-#cntB{bottom:80px;left:14px}
+#cntB{top:88px;left:14px;bottom:auto}
 #cntB b{color:var(--cyan)}
 #srcB{bottom:10px;left:50%;transform:translateX(-50%);color:var(--dimm);display:none}
 #errB{top:10px;left:50%;transform:translateX(-50%);
@@ -129,6 +131,11 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
   display:flex;flex-direction:column;overflow:hidden;z-index:900;
   transition:transform .35s var(--ease),opacity .3s var(--ease),background .25s var(--ease)}
 #panel.shut{transform:translateX(16px) scale(.98);opacity:0;pointer-events:none}
+/* Constant readability floor — even at max transparency, text still sits on
+   a legible dark wash rather than whatever map colors happen to be behind it */
+#panel::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:rgba(4,7,13,.45);z-index:0}
+#panel>*{position:relative;z-index:1}
 
 /* Transparency toggle */
 #trBtn{background:none;border:1px solid var(--b1);border-radius:var(--r-pill);
@@ -286,7 +293,7 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
 
 <header>
   <div class="logo">
-    <i class="fa-solid fa-tower-broadcast" style="color:#00d4ff;font-size:1.15rem"></i>
+    <i class="fa-solid fa-compass" id="logoIco" style="color:#00d4ff;font-size:1.15rem"></i>
     <div class="logo-name">RTDN<em> · AirTrackerFree</em></div>
   </div>
   <div class="hdiv"></div>
