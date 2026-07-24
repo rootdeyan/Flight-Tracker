@@ -943,6 +943,27 @@ async function fetchCS(cs){
   try{ return await Promise.any(tries); }catch{ return null; }
 }
 
+// ADS-B feeds broadcast ICAO-style callsigns (e.g. "BAW249"), but people
+// naturally search IATA-style flight numbers (e.g. "BA249") — those never
+// match directly. Translate the 2-3 letter airline prefix via adsbdb.
+async function fetchAirlineIcao(prefix){
+  try{
+    const d=await getJSON(`https://api.adsbdb.com/v0/airline/${encodeURIComponent(prefix)}`,5000);
+    const first=Array.isArray(d?.response)?d.response[0]:null;
+    return first?.icao||null;
+  }catch{ return null; }
+}
+
+// Last-resort: query might be a registration/tail number rather than a
+// callsign — resolve it to its Mode-S hex via adsbdb, then check if that
+// specific aircraft is currently broadcasting anywhere.
+async function fetchHexByRegistration(reg){
+  try{
+    const d=await getJSON(`https://api.adsbdb.com/v0/aircraft/${encodeURIComponent(reg)}`,5000);
+    return d?.response?.aircraft?.mode_s?.toLowerCase()||null;
+  }catch{ return null; }
+}
+
 // Photo from planespotters.net (free, CORS-ok, no key)
 async function fetchPhoto(hex){
   if(hex in photoCache) return photoCache[hex];  // avoid refetching on reselect
@@ -1371,13 +1392,30 @@ function addLog(msg,cls=''){
 async function performSearch(q){
   q=(q||'').trim().toUpperCase();
   if(q.length<2) return false;
+
+  // 1. Already-loaded aircraft (fast path, no network needed)
   const hit=Object.values(cache).find(a=>
     (a.flight||'').trim().toUpperCase().includes(q)||
     a.hex.toUpperCase().includes(q)||
     (a.r||'').toUpperCase().includes(q)
   );
   if(hit){ selectAc(hit.hex); map.panTo([hit.lat,hit.lon],{animate:true}); return true; }
-  const res=await fetchCS(q);
+
+  // 2. Global callsign search — NOT limited to the current map view, this
+  // already searches anywhere with ADS-B/MLAT coverage
+  let res=await fetchCS(q);
+
+  // 3. If that failed and this looks like an IATA flight number (e.g.
+  // "BA249"), translate the airline prefix to ICAO ("BAW") and retry —
+  // otherwise a real, currently-flying aircraft can silently never match.
+  if(!res?.length){
+    const m=q.match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/);
+    if(m){
+      const icao=await fetchAirlineIcao(m[1]);
+      if(icao && icao!==m[1]) res=await fetchCS(icao+m[2]);
+    }
+  }
+
   if(res?.length){
     res.forEach(a=>{if(a.lat!=null){cache[a.hex]=a;
       if(!markers[a.hex]) markers[a.hex]=L.marker([a.lat,a.lon],
@@ -1389,7 +1427,24 @@ async function performSearch(q){
     map.flyTo([res[0].lat,res[0].lon],8,{duration:1.2});
     return true;
   }
-  toast('Flight not found in current coverage.');
+
+  // 4. Last resort — maybe it's a registration/tail number, not a callsign
+  const hex=await fetchHexByRegistration(q);
+  if(hex){
+    const ac=await fetchOne(hex);
+    if(ac?.lat!=null){
+      cache[ac.hex]=ac;
+      if(!markers[ac.hex]) markers[ac.hex]=L.marker([ac.lat,ac.lon],
+        {icon:mkIcon(ac.track,false,ac.on_ground,false)})
+        .addTo(map).bindTooltip((ac.flight||ac.hex).toUpperCase(),{direction:'top',offset:[0,-8]})
+        .on('click',()=>selectAc(ac.hex));
+      selectAc(ac.hex);
+      map.flyTo([ac.lat,ac.lon],8,{duration:1.2});
+      return true;
+    }
+  }
+
+  toast('Not currently broadcasting — on the ground, out of coverage, or not yet airborne.');
   return false;
 }
 
