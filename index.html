@@ -201,18 +201,18 @@ header>*{position:relative;z-index:1}
 
 /* Filter panel — shares favPanel's exact position/size (they're mutually
    exclusive, so no need for separate screen real estate) */
-#filterPanel{position:fixed;top:170px;left:14px;bottom:14px;width:270px;
+#filterPanel{position:fixed;top:170px;left:14px;width:270px;max-height:calc(100vh - 200px);
   background:color-mix(in srgb, var(--panel) calc(var(--glass-alpha)*100%), transparent);
   backdrop-filter:blur(var(--panel-blur));-webkit-backdrop-filter:blur(var(--panel-blur));
   border:1px solid rgba(255,255,255,.07);border-radius:var(--r-lg);
   box-shadow:0 20px 60px rgba(0,0,0,.45);
-  display:flex;flex-direction:column;overflow:hidden;z-index:850;
+  display:flex;flex-direction:column;overflow:visible;z-index:850;
   transition:transform .3s var(--ease),opacity .25s var(--ease)}
 #filterPanel.shut{transform:translateX(-16px) scale(.98);opacity:0;pointer-events:none}
 #filterPanel::before{content:'';position:absolute;inset:0;pointer-events:none;
   background:rgba(4,7,13,.55);z-index:0;border-radius:inherit}
 #filterPanel>*{position:relative;z-index:1}
-.filterBody{padding:14px;overflow-y:auto}
+.filterBody{padding:14px;overflow:visible}
 .filterLbl{display:block;font-family:var(--cond);font-size:.7rem;font-weight:700;
   letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:7px}
 
