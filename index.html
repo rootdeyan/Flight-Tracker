@@ -1389,58 +1389,77 @@ function addLog(msg,cls=''){
 }
 
 // ── SEARCH ───────────────────────────────────────────────────
-async function performSearch(q){
-  q=(q||'').trim().toUpperCase();
+// Mirrors how FlightRadar24's search actually works: it accepts a flight
+// number in either IATA or ICAO format, an aircraft registration, an ICAO
+// callsign, or a Mode-S/ICAO24 hex code — matched in whichever order is
+// fastest and most likely to hit, with several format variants attempted
+// per query since real-world input is inconsistent (spaces, dashes, casing).
+async function performSearch(qRaw){
+  const q=(qRaw||'').trim().toUpperCase();
   if(q.length<2) return false;
+  const flat=q.replace(/\s+/g,'');   // "W6 4401" and "W64401" should behave identically
 
-  // 1. Already-loaded aircraft (fast path, no network needed)
+  // helper: place a found/loaded aircraft on the map and select it
+  const land=(a)=>{
+    cache[a.hex]=a;
+    if(!markers[a.hex]) markers[a.hex]=L.marker([a.lat,a.lon],
+      {icon:mkIcon(a.track,false,a.on_ground,false)})
+      .addTo(map).bindTooltip((a.flight||a.hex).toUpperCase(),{direction:'top',offset:[0,-8]})
+      .on('click',()=>selectAc(a.hex));
+    selectAc(a.hex);
+    map.flyTo([a.lat,a.lon],8,{duration:1.2});
+  };
+
+  // 1. Already-loaded aircraft (fast path, no network needed) — matches
+  // callsign, registration, or hex against anything currently in memory
   const hit=Object.values(cache).find(a=>
+    (a.flight||'').trim().toUpperCase().replace(/\s+/g,'')===flat||
     (a.flight||'').trim().toUpperCase().includes(q)||
-    a.hex.toUpperCase().includes(q)||
-    (a.r||'').toUpperCase().includes(q)
+    a.hex.toUpperCase()===flat||
+    (a.r||'').toUpperCase().replace(/-/g,'')===flat.replace(/-/g,'')
   );
   if(hit){ selectAc(hit.hex); map.panTo([hit.lat,hit.lon],{animate:true}); return true; }
 
-  // 2. Global callsign search — NOT limited to the current map view, this
-  // already searches anywhere with ADS-B/MLAT coverage
-  let res=await fetchCS(q);
+  // 2. Looks like a raw ICAO24/Mode-S hex code (exactly 6 hex digits) —
+  // the most direct and unambiguous lookup, skip straight to live position
+  if(/^[0-9A-F]{6}$/.test(flat)){
+    const ac=await fetchOne(flat.toLowerCase());
+    if(ac?.lat!=null){ land(ac); return true; }
+  }
 
-  // 3. If that failed and this looks like an IATA flight number (e.g.
-  // "BA249"), translate the airline prefix to ICAO ("BAW") and retry —
-  // otherwise a real, currently-flying aircraft can silently never match.
+  // 3. Global callsign search — NOT limited to the current map view, this
+  // already searches anywhere with ADS-B/MLAT coverage
+  let res=await fetchCS(flat);
+
+  // 4. If that failed and this looks like an IATA flight number (e.g.
+  // "BA249" or "W64401"), translate the 2-character IATA airline code to
+  // its ICAO equivalent and retry. IATA airline codes are ALWAYS exactly
+  // 2 characters and are often alphanumeric (W6, B6, U2, 6E…).
   if(!res?.length){
-    const m=q.match(/^([A-Z]{2,3})(\d{1,4}[A-Z]?)$/);
+    const m=flat.match(/^([A-Z0-9]{2})(\d{1,4}[A-Z]?)$/);
     if(m){
       const icao=await fetchAirlineIcao(m[1]);
       if(icao && icao!==m[1]) res=await fetchCS(icao+m[2]);
     }
   }
 
-  if(res?.length){
-    res.forEach(a=>{if(a.lat!=null){cache[a.hex]=a;
-      if(!markers[a.hex]) markers[a.hex]=L.marker([a.lat,a.lon],
-        {icon:mkIcon(a.track,false,a.on_ground,false)})
-        .addTo(map).bindTooltip((a.flight||a.hex).toUpperCase(),{direction:'top',offset:[0,-8]})
-        .on('click',()=>selectAc(a.hex));
-    }});
-    selectAc(res[0].hex);
-    map.flyTo([res[0].lat,res[0].lon],8,{duration:1.2});
-    return true;
-  }
+  if(res?.length){ land(res[0]); return true; }
 
-  // 4. Last resort — maybe it's a registration/tail number, not a callsign
-  const hex=await fetchHexByRegistration(q);
-  if(hex){
-    const ac=await fetchOne(hex);
-    if(ac?.lat!=null){
-      cache[ac.hex]=ac;
-      if(!markers[ac.hex]) markers[ac.hex]=L.marker([ac.lat,ac.lon],
-        {icon:mkIcon(ac.track,false,ac.on_ground,false)})
-        .addTo(map).bindTooltip((ac.flight||ac.hex).toUpperCase(),{direction:'top',offset:[0,-8]})
-        .on('click',()=>selectAc(ac.hex));
-      selectAc(ac.hex);
-      map.flyTo([ac.lat,ac.lon],8,{duration:1.2});
-      return true;
+  // 5. Maybe it's a registration/tail number, not a callsign at all — try
+  // it as typed, with dashes stripped, and with a dash inserted at the two
+  // most common prefix lengths (single-letter countries like N/G/F/D/I, and
+  // two-letter countries like OO/PH/OE/HB/EI/SE/LN/OY/CS/HA/YR/…)
+  const regCandidates=[q, flat];
+  if(!flat.includes('-') && /^[A-Z]/.test(flat) && flat.length>=4){
+    regCandidates.push(flat.slice(0,1)+'-'+flat.slice(1));
+    if(flat.length>=5) regCandidates.push(flat.slice(0,2)+'-'+flat.slice(2));
+  }
+  for(const cand of [...new Set(regCandidates)]){
+    const hex=await fetchHexByRegistration(cand);
+    if(hex){
+      const ac=await fetchOne(hex);
+      if(ac?.lat!=null){ land(ac); return true; }
+      break;   // aircraft exists but isn't currently broadcasting — no point trying other spellings
     }
   }
 
