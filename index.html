@@ -840,6 +840,21 @@ function initMap(){
   map.on('moveend', debounce(load, 600));
   aptLayerGroup = L.layerGroup().addTo(map);
   map.on('zoomend', renderAirports);
+  loadCountryBorders();
+}
+
+// Country borders as a dedicated overlay (not part of the tile imagery) so
+// they stay crisp and clearly visible regardless of the dark tile filter.
+// Natural Earth 1:110m boundaries via datasets/geo-countries (public domain,
+// actively maintained), served through jsdelivr's CDN.
+async function loadCountryBorders(){
+  try{
+    const geo=await getJSON('https://cdn.jsdelivr.net/gh/datasets/geo-countries/data/countries.geojson',15000);
+    L.geoJSON(geo,{
+      interactive:false,
+      style:{color:'#7fa8d9',weight:1.1,opacity:.65,fill:false}
+    }).addTo(map);
+  }catch(e){ console.warn('Country border overlay failed to load',e); }
 }
 
 // ── AIRPORT MARKERS ──────────────────────────────────────────
