@@ -806,10 +806,40 @@ function renderAirports(){
   }
 }
 
+// ── AIRCRAFT CLASSIFICATION ──────────────────────────────────
+// Common ICAO type designators for business/private jets — used since
+// there's no direct "private jet" flag in ADS-B data, unlike helicopter
+// (emitter category A7) and military (dbFlags bit 0), which are both
+// standard, verified fields present across all four of our data sources.
+const BIZJET_TYPES=new Set([
+  'C500','C501','C525','C550','C551','C560','C56X','C650','C680','C68A','C700','C750','C25A','C25B','C25C',
+  'GLF4','GLF5','GLF6','GA5C','GA6C','G150','G200','GALX',
+  'CL30','CL35','CL60','GL5T','GL6T','GLEX',
+  'FA10','FA20','FA50','FA7X','FA8X','F900','F2TH',
+  'E50P','E55P','EA50','E135BJ','E145XR',
+  'LJ23','LJ24','LJ25','LJ28','LJ31','LJ35','LJ40','LJ45','LJ55','LJ60','LJ70','LJ75',
+  'H25A','H25B','H25C','BE40',
+  'PC12','PC24','TBM7','TBM8','TBM9',
+]);
+
+function classifyAircraft(ac){
+  if((ac.dbFlags??0)&1) return 'military';
+  const cat=(ac.category||'').toUpperCase();
+  if(cat==='A7') return 'heli';
+  if(BIZJET_TYPES.has((ac.t||'').toUpperCase())) return 'private';
+  return 'normal';
+}
+
 // ── AIRCRAFT ICON ────────────────────────────────────────────
-// Realistic top-down silhouette: fuselage + wings + stabilizers
-function mkIcon(hdg, sel, gnd, emg){
-  const col = emg ? '#ff4f6a' : sel ? '#00ff9d' : gnd ? '#ffb347' : '#00d4ff';
+// Realistic top-down silhouette: fuselage + wings + stabilizers (helicopters
+// get a genuinely different shape; military/private just get a distinct
+// color, same as most trackers do for these sub-types)
+function mkIcon(ac, sel){
+  const emg=ac.emergency&&ac.emergency!=='none';
+  const gnd=ac.on_ground;
+  const kind=classifyAircraft(ac);
+  const kindCol = kind==='heli' ? '#a78bfa' : kind==='military' ? '#8f9779' : kind==='private' ? '#f472b6' : '#00d4ff';
+  const col = emg ? '#ff4f6a' : sel ? '#00ff9d' : gnd ? '#ffb347' : kindCol;
   const sz  = sel ? 34 : 19;
   const op  = gnd ? 0.6 : 1;
   // A clear pulsing ring — not a glow — marks the actively selected/tracked
@@ -817,19 +847,31 @@ function mkIcon(hdg, sel, gnd, emg){
   // since SMIL elements that get destroyed/recreated on every setIcon() call
   // are a known cause of browser jank/unresponsiveness.
   const ring = sel ? `<circle class="acRing" cx="16" cy="16" r="13" stroke="${col}" stroke-width="1.6" fill="none"/>` : '';
+
+  const body = kind==='heli'
+    ? `<g fill="${col}" opacity="${op}">
+        <ellipse cx="16" cy="17" rx="4.2" ry="6"/>
+        <rect x="15.3" y="6" width="1.4" height="11"/>
+        <rect x="4" y="15.7" width="24" height="1.2" rx=".6" transform="rotate(0 16 16)"/>
+        <rect x="6" y="6.3" width="20" height="1" rx=".5" transform="rotate(90 16 16.8)"/>
+        <rect x="15.5" y="17" width="1" height="10"/>
+        <rect x="13.5" y="26" width="5" height="1" rx=".5"/>
+      </g>`
+    : `<g fill="${col}" opacity="${op}">
+        <ellipse cx="16" cy="5.5" rx="2.3" ry="3.5"/>
+        <rect x="13.7" y="7" width="4.6" height="16" rx="2.3"/>
+        <path d="M17.8 13.5 L30 19 L28 20.5 L17.8 17Z"/>
+        <path d="M14.2 13.5 L2 19 L4 20.5 L14.2 17Z"/>
+        <path d="M17.5 24 L24 27 L23.2 28.5 L16 25.8Z"/>
+        <path d="M14.5 24 L8 27 L8.8 28.5 L16 25.8Z"/>
+      </g>`;
+
   const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
     ${ring}
-    <g fill="${col}" opacity="${op}">
-      <ellipse cx="16" cy="5.5" rx="2.3" ry="3.5"/>
-      <rect x="13.7" y="7" width="4.6" height="16" rx="2.3"/>
-      <path d="M17.8 13.5 L30 19 L28 20.5 L17.8 17Z"/>
-      <path d="M14.2 13.5 L2 19 L4 20.5 L14.2 17Z"/>
-      <path d="M17.5 24 L24 27 L23.2 28.5 L16 25.8Z"/>
-      <path d="M14.5 24 L8 27 L8.8 28.5 L16 25.8Z"/>
-    </g>
+    ${body}
   </svg>`;
   return L.divIcon({
-    html:`<div style="transform:rotate(${hdg??0}deg);transform-origin:center;line-height:0;display:inline-block">${svg}</div>`,
+    html:`<div style="transform:rotate(${ac.track??0}deg);transform-origin:center;line-height:0;display:inline-block">${svg}</div>`,
     className:'',
     iconSize:[sz,sz], iconAnchor:[sz/2,sz/2]
   });
@@ -866,6 +908,7 @@ function normADSB(list, src){
     orig_iata:a.orig_iata||a.orig||null,
     dest_iata:a.dest_iata||a.dest||null,
     on_ground:!!a.on_ground, emergency:a.emergency||null,
+    category:a.category||null, dbFlags:a.dbFlags??0,
   }));
 }
 
@@ -924,7 +967,7 @@ async function mergeExtraSources(attempts, wonName, cycleId){
           cache[ac.hex]=ac; lastSeenCycle[ac.hex]=cycleId; added=true;
           if(!markers[ac.hex]){
             markers[ac.hex]=L.marker([ac.lat,ac.lon],
-              {icon:mkIcon(ac.track,false,ac.on_ground,false)})
+              {icon:mkIcon(ac,false)})
               .addTo(map)
               .bindTooltip((ac.flight||ac.hex).toUpperCase(),{direction:'top',offset:[0,-8]})
               .on('click',()=>selectAc(ac.hex));
@@ -937,6 +980,8 @@ async function mergeExtraSources(attempts, wonName, cycleId){
           if(!existing.t && ac.t) existing.t=ac.t;
           if(!existing.squawk && ac.squawk) existing.squawk=ac.squawk;
           if(existing.track==null && ac.track!=null) existing.track=ac.track;
+          if(!existing.category && ac.category) existing.category=ac.category;
+          if(!(existing.dbFlags&1) && (ac.dbFlags&1)) existing.dbFlags=ac.dbFlags;
           if(gotFlight && selHex===ac.hex) fillPanel(existing);
         }
       }
@@ -964,6 +1009,8 @@ async function fetchOne(hex){
       orig_iata:raw.orig_iata||raw.orig||cache[hex]?.orig_iata||null,
       dest_iata:raw.dest_iata||raw.dest||cache[hex]?.dest_iata||null,
       on_ground:!!raw.on_ground, emergency:raw.emergency||null,
+      category:raw.category||cache[hex]?.category||null,
+      dbFlags:raw.dbFlags??cache[hex]?.dbFlags??0,
     };
   };
 
@@ -1093,8 +1140,7 @@ function renderAll(result){
     if(ac.hex===selHex) fillPanel(ac);
 
     const isSel=ac.hex===selHex;
-    const emg=ac.emergency&&ac.emergency!=='none';
-    const icon=mkIcon(ac.track,isSel,ac.on_ground,emg);
+    const icon=mkIcon(ac,isSel);
 
     if(markers[ac.hex]){
       markers[ac.hex].setLatLng([ac.lat,ac.lon]).setIcon(icon);
@@ -1125,13 +1171,13 @@ function renderAll(result){
 function selectAc(hex){
   if(selHex&&selHex!==hex&&markers[selHex]&&cache[selHex]){
     const o=cache[selHex];
-    markers[selHex].setIcon(mkIcon(o.track,false,o.on_ground,false));
+    markers[selHex].setIcon(mkIcon(o,false));
     markers[selHex].setZIndexOffset(0);
   }
   selHex=hex;
   const ac=cache[hex];
   if(!ac) return;
-  markers[hex]?.setIcon(mkIcon(ac.track,true,ac.on_ground,ac.emergency&&ac.emergency!=='none'));
+  markers[hex]?.setIcon(mkIcon(ac,true));
   markers[hex]?.setZIndexOffset(1000);
   map.panTo([ac.lat,ac.lon],{animate:true,duration:.5});
   openPanel(ac);
@@ -1306,7 +1352,7 @@ function closePanel(){
   qs('#panel').classList.add('shut');
   if(selHex&&markers[selHex]&&cache[selHex]){
     const o=cache[selHex];
-    markers[selHex].setIcon(mkIcon(o.track,false,o.on_ground,false));
+    markers[selHex].setIcon(mkIcon(o,false));
     markers[selHex].setZIndexOffset(0);
   }
   selHex=null;
@@ -1424,7 +1470,7 @@ async function pollTrack(){
   if(selHex===ac.hex) fillPanel(ac);
   if(markers[ac.hex] && ac.lat!=null)
     markers[ac.hex].setLatLng([ac.lat,ac.lon])
-      .setIcon(mkIcon(ac.track,selHex===ac.hex,ac.on_ground,false));
+      .setIcon(mkIcon(ac,selHex===ac.hex));
   // Auto-follow: pan map to keep tracked plane centred
   if(followMode && ac.lat!=null)
     map.panTo([ac.lat,ac.lon],{animate:true,duration:.8,noMoveStart:true});
@@ -1488,7 +1534,7 @@ async function performSearch(qRaw){
   const land=(a)=>{
     cache[a.hex]=a;
     if(!markers[a.hex]) markers[a.hex]=L.marker([a.lat,a.lon],
-      {icon:mkIcon(a.track,false,a.on_ground,false)})
+      {icon:mkIcon(a,false)})
       .addTo(map).bindTooltip((a.flight||a.hex).toUpperCase(),{direction:'top',offset:[0,-8]})
       .on('click',()=>selectAc(a.hex));
     selectAc(a.hex);
