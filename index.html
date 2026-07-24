@@ -3,9 +3,11 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>SkyTrace — Live Flight Tracker</title>
+<title>RTDN — AirTrackerFree</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23070b12'/%3E%3Cpath d='M16 4L23 18H9L16 4Z' fill='%2300d4ff' opacity='.85'/%3E%3Ccircle cx='16' cy='19' r='2' fill='%2300d4ff'/%3E%3Cline x1='16' y1='21' x2='16' y2='27' stroke='%2300d4ff' stroke-width='1.6'/%3E%3Cline x1='10.5' y1='25' x2='21.5' y2='25' stroke='%2300d4ff' stroke-width='1.6'/%3E%3C/svg%3E"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet"/>
 <style>
 :root{
@@ -14,6 +16,9 @@
   --cyan:#00d4ff;--green:#00ff9d;--amber:#ffb347;--red:#ff4f6a;
   --txt:#b8d0ee;--dim:#3b5272;--dimm:#56739e;
   --mono:'Share Tech Mono',monospace;--sans:'Barlow',sans-serif;--cond:'Barlow Condensed',sans-serif;
+  --r-sm:8px;--r-md:12px;--r-lg:16px;--r-pill:999px;
+  --ease:cubic-bezier(.4,0,.2,1);
+  --panel-alpha:0.94;--panel-blur:18px;
 }
 *,::before,::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--sans)}
@@ -26,19 +31,21 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 .logo{display:flex;align-items:center;gap:8px;flex-shrink:0;user-select:none}
 .logo svg{width:26px;height:26px}
 .logo-name{font-family:var(--cond);font-weight:700;font-size:1.15rem;
-  letter-spacing:3px;text-transform:uppercase;color:var(--cyan)}
-.logo-name em{color:var(--txt);font-style:normal}
+  letter-spacing:3px;text-transform:uppercase;color:var(--cyan);white-space:nowrap}
+.logo-name em{color:var(--dimm);font-style:normal;font-weight:400;font-size:.72rem;letter-spacing:1.5px;margin-left:2px}
 .hdiv{width:1px;height:22px;background:var(--b1);flex-shrink:0}
 
 /* Search */
 .srch{position:relative;flex:1;max-width:300px}
 .si{position:absolute;left:10px;top:50%;transform:translateY(-50%);
   color:var(--dim);pointer-events:none;display:flex}
-#sIn{width:100%;background:var(--bg);border:1px solid var(--b1);border-radius:4px;
+#sIn{width:100%;background:var(--bg);border:1px solid var(--b1);border-radius:var(--r-pill);
   color:var(--txt);font-family:var(--mono);font-size:.78rem;letter-spacing:1.5px;
-  padding:7px 28px 7px 32px;outline:none;transition:border-color .2s;text-transform:uppercase}
+  padding:7px 30px 7px 32px;outline:none;transition:border-color .25s var(--ease),box-shadow .25s var(--ease);text-transform:uppercase}
 #sIn::placeholder{color:var(--dim)}
-#sIn:focus{border-color:var(--cyan)}
+#sIn:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,.12),0 0 14px rgba(0,212,255,.15)}
+.srch .si{transition:color .25s var(--ease)}
+.srch:has(#sIn:focus) .si{color:var(--cyan)}
 #sCl{position:absolute;right:8px;top:50%;transform:translateY(-50%);
   background:none;border:none;color:var(--dim);cursor:pointer;
   font-size:.82rem;display:none;padding:2px 4px;line-height:1}
@@ -59,10 +66,10 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 .hst b{color:var(--txt)}
 
 /* Refresh */
-#rfBtn{background:none;border:1px solid var(--b1);border-radius:4px;
+#rfBtn{background:none;border:1px solid var(--b1);border-radius:var(--r-sm);
   color:var(--dim);cursor:pointer;padding:5px 11px;
   font-family:var(--mono);font-size:.67rem;letter-spacing:1px;
-  display:flex;align-items:center;gap:5px;transition:all .2s;flex-shrink:0}
+  display:flex;align-items:center;gap:5px;transition:all .2s var(--ease);flex-shrink:0}
 #rfBtn:hover{border-color:var(--cyan);color:var(--cyan)}
 #rfBtn.spin svg{animation:spinA .6s linear infinite}
 @keyframes spinA{to{transform:rotate(360deg)}}
@@ -84,7 +91,7 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 
 /* Map badges */
 .mb{position:absolute;z-index:900;pointer-events:none;
-  background:rgba(11,17,32,.92);border:1px solid var(--b1);border-radius:4px;
+  background:rgba(11,17,32,.92);border:1px solid var(--b1);border-radius:var(--r-sm);
   padding:6px 11px;font-family:var(--mono);font-size:.67rem;color:var(--dim)}
 #cntB{bottom:10px;left:10px}
 #cntB b{color:var(--cyan)}
@@ -105,10 +112,19 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 .llbl{font-family:var(--mono);font-size:.7rem;letter-spacing:2px;color:var(--dim)}
 
 /* SIDE PANEL */
-#panel{width:335px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--b1);
+#panel{width:335px;flex-shrink:0;
+  background:color-mix(in srgb, var(--panel) calc(var(--panel-alpha)*100%), transparent);
+  backdrop-filter:blur(var(--panel-blur));-webkit-backdrop-filter:blur(var(--panel-blur));
+  border-left:1px solid var(--b1);border-top-left-radius:var(--r-lg);
   display:flex;flex-direction:column;overflow:hidden;
-  transition:width .26s cubic-bezier(.4,0,.2,1)}
+  transition:width .3s var(--ease),background .25s var(--ease)}
 #panel.shut{width:0}
+
+/* Transparency toggle */
+#trBtn{background:none;border:1px solid var(--b1);border-radius:var(--r-pill);
+  color:var(--dim);cursor:pointer;width:24px;height:24px;display:flex;align-items:center;
+  justify-content:center;font-size:.68rem;transition:all .2s var(--ease);flex-shrink:0}
+#trBtn:hover,#trBtn.on{border-color:var(--cyan);color:var(--cyan)}
 
 /* Empty */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -185,6 +201,11 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 .rico{flex-shrink:0;color:var(--cyan);opacity:.75}
 .reta{font-family:var(--mono);font-size:.62rem;color:var(--dimm);
   letter-spacing:.5px;text-align:center}
+.rtimes{display:flex;justify-content:space-between;margin-top:9px;padding-top:8px;
+  border-top:1px dashed var(--b1);font-family:var(--mono);font-size:.62rem;
+  color:var(--dim);letter-spacing:.5px}
+.rtimes b{color:var(--txt);font-weight:400}
+.rtimes span:empty{display:none}
 
 /* Stats grid */
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--b1);flex-shrink:0}
@@ -199,10 +220,11 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 /* Track btn */
 .tsec{padding:12px 14px;border-bottom:1px solid var(--b1);flex-shrink:0}
 #trkBtn{width:100%;background:rgba(0,212,255,.06);border:1px solid rgba(0,212,255,.24);
-  border-radius:4px;color:var(--cyan);font-family:var(--cond);font-size:.78rem;
+  border-radius:var(--r-pill);color:var(--cyan);font-family:var(--cond);font-size:.78rem;
   font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:9px;
-  cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:7px}
-#trkBtn:hover{background:rgba(0,212,255,.14);border-color:var(--cyan)}
+  cursor:pointer;transition:all .22s var(--ease);display:flex;align-items:center;justify-content:center;gap:7px}
+#trkBtn:hover{background:rgba(0,212,255,.14);border-color:var(--cyan);transform:translateY(-1px)}
+#trkBtn:active{transform:translateY(0)}
 #trkBtn.on{background:rgba(0,255,157,.07);border-color:rgba(0,255,157,.28);color:var(--green)}
 #trkBtn.on:hover{background:rgba(0,255,157,.13)}
 
@@ -223,9 +245,9 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 
 /* Toast */
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
-  background:var(--panel);border:1px solid var(--b1);border-radius:4px;
+  background:var(--panel);border:1px solid var(--b1);border-radius:var(--r-pill);
   padding:8px 16px;font-family:var(--mono);font-size:.7rem;color:var(--txt);
-  letter-spacing:1px;opacity:0;pointer-events:none;transition:opacity .3s;z-index:9999}
+  letter-spacing:1px;opacity:0;pointer-events:none;transition:opacity .3s var(--ease);z-index:9999}
 #toast.show{opacity:1}
 
 /* Selected pulse */
@@ -254,23 +276,14 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 
 <header>
   <div class="logo">
-    <svg viewBox="0 0 26 26" fill="none">
-      <path d="M13 2L20 16H6L13 2Z" stroke="#00d4ff" stroke-width="1.4" fill="rgba(0,212,255,.07)"/>
-      <circle cx="13" cy="16" r="2.2" fill="#00d4ff" opacity=".3"/>
-      <line x1="13" y1="18" x2="13" y2="23" stroke="#00d4ff" stroke-width="1.4"/>
-      <line x1="7.5" y1="21" x2="18.5" y2="21" stroke="#00d4ff" stroke-width="1.4"/>
-    </svg>
-    <div class="logo-name">Sky<em>Trace</em></div>
+    <i class="fa-solid fa-tower-broadcast" style="color:#00d4ff;font-size:1.15rem"></i>
+    <div class="logo-name">RTDN<em> · AirTrackerFree</em></div>
   </div>
   <div class="hdiv"></div>
   <div class="srch">
-    <span class="si">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-    </span>
+    <span class="si"><i class="fa-solid fa-magnifying-glass" style="font-size:.72rem"></i></span>
     <input id="sIn" type="text" placeholder="CALLSIGN / REG / HEX…" maxlength="12" autocomplete="off" spellcheck="false"/>
-    <button id="sCl">✕</button>
+    <button id="sCl"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div class="hstats">
     <div class="livepill"><div class="ldot"></div>LIVE</div>
@@ -279,10 +292,7 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
     <div class="hst" id="hSrc" style="opacity:.6"></div>
   </div>
   <button id="rfBtn">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-      <polyline points="23 4 23 10 17 10"/>
-      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-    </svg>
+    <i class="fa-solid fa-arrows-rotate" style="font-size:.72rem"></i>
     REFRESH
   </button>
 </header>
@@ -313,7 +323,10 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
     <div id="det">
       <div class="pbar">
         <span class="pbar-lbl">Flight Details</span>
-        <button id="clsBtn">✕</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button id="trBtn" title="Toggle panel transparency"><i class="fa-solid fa-droplet"></i></button>
+          <button id="clsBtn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
       </div>
 
       <div class="hero">
@@ -370,14 +383,15 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
               <div class="rcity" id="dToC"></div>
             </div>
           </div>
+          <div class="rtimes" id="dTimes"></div>
         </div>
 
         <!-- Stats -->
         <div class="grid">
-          <div class="cell"><div class="clbl">Altitude</div><div class="cval" id="dAlt">—<span class="u">ft</span></div></div>
-          <div class="cell"><div class="clbl">Ground Speed</div><div class="cval" id="dSpd">—<span class="u">kn</span></div></div>
+          <div class="cell"><div class="clbl">Altitude</div><div class="cval" id="dAlt">—<span class="u">km</span></div></div>
+          <div class="cell"><div class="clbl">Ground Speed</div><div class="cval" id="dSpd">—<span class="u">km/h</span></div></div>
           <div class="cell"><div class="clbl">Heading</div><div class="cval" id="dHdg">—<span class="u">°</span></div></div>
-          <div class="cell"><div class="clbl">Vert. Rate</div><div class="cval" id="dVr">—<span class="u">fpm</span></div></div>
+          <div class="cell"><div class="clbl">Vert. Rate</div><div class="cval" id="dVr">—<span class="u">m/s</span></div></div>
           <div class="cell"><div class="clbl">Aircraft Type</div><div class="cval sm" id="dType">—</div></div>
           <div class="cell"><div class="clbl">Squawk</div><div class="cval" id="dSqk">—</div></div>
         </div>
@@ -385,9 +399,7 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
         <!-- Track -->
         <div class="tsec">
           <button id="trkBtn">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/>
-            </svg>
+            <i class="fa-solid fa-location-crosshairs" style="font-size:.72rem"></i>
             TRACK THIS FLIGHT
           </button>
         </div>
@@ -408,14 +420,12 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 
 <script>
 /* ═══════════════════════════════════════════════════════════
-   SkyTrace v4
-   Strategy: fire ALL apis simultaneously, use first response.
-   Sources (tried in parallel):
-     1. FlightRadar24 public zones feed — includes FROM/TO route
-     2. airplanes.live
-     3. adsb.fi
-     4. adsb.lol
+   RTDN — AirTrackerFree
+   Strategy: fire ALL position APIs simultaneously, use first response.
+   Live position (raced in parallel): airplanes.live, adsb.fi, adsb.lol
+   Route (origin/destination), per selected flight: adsbdb.com
    Photos: planespotters.net
+   Airports: hardcoded major hubs + lazy-loaded mwgg/Airports (29k+) dataset
    ═══════════════════════════════════════════════════════════ */
 
 // ── HELPERS (must be first — used throughout) ───────────────
@@ -616,6 +626,11 @@ let searchQ='', failCount=0, currentSrc='';
 let routeLine=null, aptLayerGroup=null, followMode=false;
 let loadInFlight=false, mergeInFlight=false, pollInFlight=false, loadCycle=0;
 const photoCache={};
+const takeoffTimes={};      // hex -> Date, only set from what we personally observed
+const routeCache={};        // callsign -> adsbdb route response (or null)
+let trackPath=[], trailLine=null;   // actual traveled trail while tracking
+let panelTransparent=localStorage.getItem('rtdn_panelTransparent')==='1';
+let allAirports=null;       // full mwgg/Airports dataset, lazy-loaded
 
 // ── MAP ─────────────────────────────────────────────────────
 function initMap(){
@@ -629,20 +644,63 @@ function initMap(){
 }
 
 // ── AIRPORT MARKERS ──────────────────────────────────────────
+// Major hubs (APT_COORDS, hardcoded) are always shown from zoom 4 up.
+// Minor airports come from a full ~29k-airport open dataset, lazy-loaded
+// only once the user actually zooms in far enough to want them — no need
+// to make every visitor download it upfront.
+let airportsLoading=false;
+async function loadAllAirports(){
+  if(airportsLoading||allAirports) return;
+  airportsLoading=true;
+  try{
+    const d=await getJSON('https://cdn.jsdelivr.net/gh/mwgg/Airports/airports.json',20000);
+    allAirports=Object.values(d).filter(a=>(a.lat??a.latitude)!=null&&(a.lon??a.longitude)!=null);
+  }catch(e){ console.warn('World airport dataset failed to load',e); allAirports=[]; }
+  finally{ airportsLoading=false; }
+  renderAirports();
+}
+
 function renderAirports(){
   aptLayerGroup.clearLayers();
-  if(map.getZoom() < 4) return; // show airports from zoom 4 upwards
-  const bounds = map.getBounds();
+  const zoom=map.getZoom();
+  if(zoom<4) return;
+  const bounds=map.getBounds();
+
+  // Major hubs — always visible from zoom 4, bold & labeled
   for(const [iata,[lat,lon]] of Object.entries(APT_COORDS)){
     if(!bounds.contains([lat,lon])) continue;
-    const dot = L.divIcon({
+    const dot=L.divIcon({
       html:`<div style="position:relative">
-        <div style="width:8px;height:8px;background:#ffb347;border:1.5px solid #0b1120;border-radius:50%;box-shadow:0 0 6px rgba(255,179,71,.5)"></div>
-        <div style="position:absolute;left:11px;top:-3px;font-family:'Share Tech Mono',monospace;font-size:10px;color:#ffb347;white-space:nowrap;text-shadow:0 0 4px #0b1120,0 0 4px #0b1120">${iata}</div>
+        <div style="width:9px;height:9px;background:#ffb347;border:1.5px solid #0b1120;border-radius:50%;box-shadow:0 0 8px rgba(255,179,71,.65)"></div>
+        <div style="position:absolute;left:12px;top:-3px;font-family:'Share Tech Mono',monospace;font-size:10px;font-weight:700;color:#ffb347;white-space:nowrap;text-shadow:0 0 4px #0b1120,0 0 4px #0b1120">${iata}</div>
       </div>`,
-      className:'', iconSize:[8,8], iconAnchor:[4,4]
+      className:'', iconSize:[9,9], iconAnchor:[4,4]
     });
-    L.marker([lat,lon],{icon:dot,zIndexOffset:-100,interactive:false}).addTo(aptLayerGroup);
+    L.marker([lat,lon],{icon:dot,zIndexOffset:-90,interactive:false}).addTo(aptLayerGroup);
+  }
+
+  // Minor airports — fade in once zoomed in; dataset is huge so it's
+  // lazy-loaded on first need and capped per-view to stay smooth
+  if(zoom>=7){
+    if(!allAirports){ loadAllAirports(); return; }
+    const showLabel=zoom>=9;
+    let shown=0;
+    for(const a of allAirports){
+      if(shown>=350) break;
+      const lat=a.lat??a.latitude, lon=a.lon??a.longitude;
+      const iata=a.iata||'';
+      if(APT_COORDS[iata]) continue;              // already drawn as a major hub
+      if(!bounds.contains([lat,lon])) continue;
+      const dot=L.divIcon({
+        html:`<div style="position:relative">
+          <div style="width:4px;height:4px;background:#56739e;border:1px solid #0b1120;border-radius:50%;opacity:.85"></div>
+          ${showLabel&&iata?`<div style="position:absolute;left:7px;top:-4px;font-family:'Share Tech Mono',monospace;font-size:8.5px;color:#56739e;white-space:nowrap;text-shadow:0 0 3px #0b1120,0 0 3px #0b1120">${iata}</div>`:''}
+        </div>`,
+        className:'', iconSize:[4,4], iconAnchor:[2,2]
+      });
+      L.marker([lat,lon],{icon:dot,zIndexOffset:-100,interactive:false}).addTo(aptLayerGroup);
+      shown++;
+    }
   }
 }
 
@@ -706,32 +764,6 @@ function normADSB(list, src){
   }));
 }
 
-// Parse FlightRadar24 zones/feed.js array format
-// Array: [icao24, lat, lon, hdg, alt_ft, spd_kn, squawkFlag, squawk,
-//         type, reg, timestamp, from_iata, to_iata, callsign, 0, vspeed, airline_icao, 0]
-function normFR24(raw, src){
-  const out=[];
-  for(const[id,v] of Object.entries(raw)){
-    if(!Array.isArray(v)||v.length<14) continue;
-    if(!v[1]||!v[2]) continue;
-    const orig=(v[11]||'').trim()||null;
-    const dest=(v[12]||'').trim()||null;
-    const alICAO=(v[16]||'').trim();
-    out.push({
-      _src:src, _fr24id:id,
-      hex:(v[0]||'').toLowerCase(), flight:(v[13]||'').trim(),
-      lat:v[1], lon:v[2], track:v[3]||0,
-      alt_baro:v[4]||0, gs:v[5]||0,
-      baro_rate:(v[15]||0)*60, squawk:v[7]||'',
-      t:v[8]||'', r:v[9]||'', desc:'', ownOp:AL[alICAO]||'',
-      orig_iata:orig, dest_iata:dest,
-      on_ground:v[4]===0||(v[4]<100&&v[5]<30),
-      emergency:null,
-    });
-  }
-  return out;
-}
-
 // ── FETCH ALL (parallel race with hard timeout) ─────────────
 async function fetchView(){
   const cent=map.getCenter(), b=map.getBounds();
@@ -752,10 +784,8 @@ async function fetchView(){
     mkAttempt(getJSON(`https://api.airplanes.live/v2/point/${lat}/${lon}/${nmi}`,7000)
       .then(d=>({src:'airplanes.live',ac:normADSB(d?.ac,'airplanes.live')}))),
   ];
-  // Note: FR24 (route/origin-destination data) is intentionally NOT raced here.
-  // It's handled by the separate, throttled mergeFR24Routes() — racing it on
-  // every single refresh spawned uncancellable background requests that piled
-  // up on pan/zoom and contributed to the flakiness.
+  // Route/origin-destination data is resolved separately, per-selected-flight,
+  // via adsbdb.com (see mergeRoute()) rather than raced in here.
 
   // Hard overall timeout — loader will ALWAYS hide within 12s
   const timeout=new Promise(res=>setTimeout(()=>res(null),12000));
@@ -914,7 +944,7 @@ function openPanel(ac){
   fillPanel(ac);
   doPhoto(ac.hex);
   // Trigger route data fetch immediately on select
-  mergeFR24Routes();
+  mergeRoute(ac.hex);
 }
 
 function fillPanel(ac){
@@ -943,53 +973,77 @@ function fillPanel(ac){
   // Route
   fillRoute(ac);
 
-  // Stats
+  // Stats — metric units
   const alt=ac.alt_baro??null;
-  qs('#dAlt').innerHTML=alt!=null?`${Math.round(alt).toLocaleString()}<span class="u">ft</span>`:`—<span class="u">ft</span>`;
-  qs('#dSpd').innerHTML=ac.gs!=null?`${Math.round(ac.gs)}<span class="u">kn</span>`:`—<span class="u">kn</span>`;
+  qs('#dAlt').innerHTML=alt!=null?`${ftToKm(alt).toFixed(alt<3000?2:1)}<span class="u">km</span>`:`—<span class="u">km</span>`;
+  qs('#dSpd').innerHTML=ac.gs!=null?`${Math.round(ktToKmh(ac.gs))}<span class="u">km/h</span>`:`—<span class="u">km/h</span>`;
   qs('#dHdg').innerHTML=ac.track!=null?`${Math.round(ac.track)}<span class="u">°</span>`:`—<span class="u">°</span>`;
 
   const vr=ac.baro_rate??null;
   if(vr!=null){
     const cls=vr>100?'up':vr<-100?'dn':'';
     const arr=vr>100?'↑':vr<-100?'↓':'→';
-    qs('#dVr').innerHTML=`<span class="${cls}">${arr}${Math.abs(Math.round(vr)).toLocaleString()}</span><span class="u">fpm</span>`;
+    const ms=fpmToMs(vr);
+    qs('#dVr').innerHTML=`<span class="${cls}">${arr}${Math.abs(ms).toFixed(1)}</span><span class="u">m/s</span>`;
   } else {
-    qs('#dVr').innerHTML=`—<span class="u">fpm</span>`;
+    qs('#dVr').innerHTML=`—<span class="u">m/s</span>`;
   }
 
   qs('#dType').textContent=ac.desc||ac.t||'—';
   qs('#dSqk').textContent=ac.squawk||'—';
 }
 
-function fillRoute(ac){
-  const orig=ac.orig_iata, dest=ac.dest_iata;
+// ── UNIT CONVERSIONS ─────────────────────────────────────────
+const ftToKm  = ft  => ft*0.0003048;
+const ktToKmh = kt  => kt*1.852;
+const fpmToMs = fpm => fpm*0.00508;
+function haversineKm(lat1,lon1,lat2,lon2){
+  const R=6371, toRad=d=>d*Math.PI/180;
+  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+  return 2*R*Math.asin(Math.sqrt(a));
+}
 
-  // From airport
+function fillRoute(ac){
+  // Prefer rich route data from adsbdb (has full name/city/coords for ANY
+  // airport, not just our hardcoded major-hub list); fall back to whatever
+  // orig/dest IATA the ADS-B feed itself supplied.
+  const ro=ac.routeOrig, rd=ac.routeDest;
+  const orig=ro?.iata_code||ac.orig_iata, dest=rd?.iata_code||ac.dest_iata;
+
   const fromCode=qs('#dFrom'), fromCity=qs('#dFromC');
-  if(orig){ fromCode.textContent=orig; fromCode.className='rcode active'; fromCity.textContent=APT[orig]||''; }
+  if(orig){ fromCode.textContent=orig; fromCode.className='rcode active';
+    fromCity.textContent=ro?`${ro.municipality||''}${ro.municipality&&ro.country_name?', ':''}${ro.country_name||''}`:(APT[orig]||''); }
   else    { fromCode.textContent='—';  fromCode.className='rcode'; fromCity.textContent=''; }
 
-  // To airport
   const toCode=qs('#dTo'), toCity=qs('#dToC');
-  if(dest){ toCode.textContent=dest; toCode.className='rcode active'; toCity.textContent=APT[dest]||''; }
+  if(dest){ toCode.textContent=dest; toCode.className='rcode active';
+    toCity.textContent=rd?`${rd.municipality||''}${rd.municipality&&rd.country_name?', ':''}${rd.country_name||''}`:(APT[dest]||''); }
   else    { toCode.textContent='—';  toCode.className='rcode'; toCity.textContent=''; }
 
-  // ETA estimate
+  // Live status line
   const eta=qs('#dEta');
-  if(!ac.on_ground&&ac.baro_rate&&ac.alt_baro){
-    const vr=ac.baro_rate;
-    if(vr<-300&&ac.alt_baro>0){
-      const mins=Math.round(ac.alt_baro/Math.abs(vr));
-      if(mins>0&&mins<90){ eta.textContent=`~${mins} min to land`; return; }
-    }
-  }
-  if(!ac.on_ground){
+  if(ac.on_ground){ eta.textContent='On ground'; }
+  else {
     const vr=ac.baro_rate??0;
     eta.textContent=vr>300?'Climbing':vr<-300?'Descending':'Cruising';
-  } else {
-    eta.textContent='On ground';
   }
+
+  // Departure (only ever what we actually observed this session — free
+  // ADS-B feeds don't carry scheduled/actual gate times) + a live-computed
+  // arrival estimate from current position, speed and destination coords.
+  const parts=[];
+  const tko=takeoffTimes[ac.hex];
+  if(tko) parts.push(`<span>Wheels up <b>${tko.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</b> (observed)</span>`);
+  if(!ac.on_ground && ac.gs>20 && ac.lat!=null && rd?.latitude!=null){
+    const distKm=haversineKm(ac.lat,ac.lon,rd.latitude,rd.longitude);
+    const hrs=distKm/ktToKmh(ac.gs);
+    if(hrs>0 && hrs<20){
+      const arrival=new Date(Date.now()+hrs*3600000);
+      parts.push(`<span>Est. arrival <b>${arrival.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</b> · ${Math.round(distKm)} km left</span>`);
+    }
+  }
+  qs('#dTimes').innerHTML=parts.join('');
 }
 
 function getAirline(ac){
@@ -1042,10 +1096,16 @@ async function doPhoto(hex){
 function startTrack(hex){
   stopTrack();
   trkHex=hex; lastTrkSt=null; followMode=true;
+  trackPath=[];
   qs('#lEnt').innerHTML=''; qs('#lEmp').style.display='none';
   setTrkBtn(true);
   addLog(`Tracking ${(cache[hex]?.flight||hex).trim().toUpperCase()}`,'hi');
-  if(cache[hex]) drawRoute(cache[hex]);
+  if(cache[hex]){
+    drawRoute(cache[hex]);
+    if(cache[hex].lat!=null) trackPath.push([cache[hex].lat,cache[hex].lon]);
+    drawTrail();
+    if(!cache[hex].routeOrig && !cache[hex].routeDest) mergeRoute(hex);
+  }
   trackTmr=setInterval(pollTrack, TRK_INT);
   pollTrack();
 }
@@ -1053,16 +1113,18 @@ function stopTrack(){
   clearInterval(trackTmr); trackTmr=null; trkHex=null; followMode=false;
   setTrkBtn(false);
   if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
+  if(trailLine){ map.removeLayer(trailLine); trailLine=null; }
+  trackPath=[];
 }
 
 // ── ROUTE LINE ON MAP ─────────────────────────────────────────
-// Draws dashed great-circle line: origin ──── [plane] ──── dest
+// Dashed projected line: origin airport ──── [plane] ──── destination airport
 function drawRoute(ac){
   if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
-  const orig=ac.orig_iata, dest=ac.dest_iata;
-  if(!orig && !dest) return;
+  const oc=ac.routeOrig ? [ac.routeOrig.latitude,ac.routeOrig.longitude] : APT_COORDS[ac.orig_iata];
+  const dc=ac.routeDest ? [ac.routeDest.latitude,ac.routeDest.longitude] : APT_COORDS[ac.dest_iata];
+  if(!oc && !dc) return;
   const pts=[];
-  const oc=APT_COORDS[orig], dc=APT_COORDS[dest];
   if(oc) pts.push(L.latLng(oc[0],oc[1]));
   if(ac.lat!=null) pts.push(L.latLng(ac.lat,ac.lon));
   if(dc) pts.push(L.latLng(dc[0],dc[1]));
@@ -1072,11 +1134,24 @@ function drawRoute(ac){
     interactive:false,smoothFactor:1
   }).addTo(map);
 }
+
+// Solid trail of the plane's ACTUAL traveled positions since "Track this
+// flight" was pressed — this is the real trace, distinct from the dashed
+// projected origin→dest line above.
+function drawTrail(){
+  if(trailLine){ map.removeLayer(trailLine); trailLine=null; }
+  if(trackPath.length<2) return;
+  trailLine=L.polyline(trackPath,{
+    color:'#00ff9d',weight:2.5,opacity:.85,
+    interactive:false,smoothFactor:1,lineCap:'round'
+  }).addTo(map);
+}
+
 function setTrkBtn(on){
   const b=qs('#trkBtn'); b.className=on?'on':'';
   b.innerHTML=on
-    ?`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="8" width="8" height="8" fill="currentColor" stroke="none" rx="1"/><circle cx="12" cy="12" r="10"/></svg> STOP TRACKING`
-    :`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> TRACK THIS FLIGHT`;
+    ?`<i class="fa-solid fa-stop" style="font-size:.7rem"></i> STOP TRACKING`
+    :`<i class="fa-solid fa-location-crosshairs" style="font-size:.72rem"></i> TRACK THIS FLIGHT`;
 }
 
 async function pollTrack(){
@@ -1086,10 +1161,15 @@ async function pollTrack(){
   const ac=await fetchOne(trkHex);
   if(!ac){ addLog('No signal — out of ADS-B coverage.','wn'); return; }
 
-  // Preserve route data from FR24 if tracking API doesn't have it
-  if(!ac.orig_iata&&cache[ac.hex]?.orig_iata) ac.orig_iata=cache[ac.hex].orig_iata;
-  if(!ac.dest_iata&&cache[ac.hex]?.dest_iata) ac.dest_iata=cache[ac.hex].dest_iata;
+  // Preserve route data already resolved via adsbdb (the live tracking API
+  // itself carries no route info)
+  const prevCached=cache[ac.hex];
+  if(!ac.orig_iata&&prevCached?.orig_iata) ac.orig_iata=prevCached.orig_iata;
+  if(!ac.dest_iata&&prevCached?.dest_iata) ac.dest_iata=prevCached.dest_iata;
+  if(prevCached?.routeOrig) ac.routeOrig=prevCached.routeOrig;
+  if(prevCached?.routeDest) ac.routeDest=prevCached.routeDest;
   cache[ac.hex]=ac;
+  if(!ac.routeOrig && !ac.routeDest && ac.flight) mergeRoute(ac.hex);
 
   if(selHex===ac.hex) fillPanel(ac);
   if(markers[ac.hex] && ac.lat!=null)
@@ -1098,25 +1178,33 @@ async function pollTrack(){
   // Auto-follow: pan map to keep tracked plane centred
   if(followMode && ac.lat!=null)
     map.panTo([ac.lat,ac.lon],{animate:true,duration:.8,noMoveStart:true});
-  // Redraw route line with updated plane position
+  // Redraw the projected route line + the real traveled trail
   drawRoute(ac);
+  if(ac.lat!=null && !ac.on_ground){
+    trackPath.push([ac.lat,ac.lon]);
+    if(trackPath.length>500) trackPath.shift();
+    drawTrail();
+  }
 
   const prev=lastTrkSt;
   if(prev){
-    if(prev.on_ground&&!ac.on_ground)   addLog('✈  Departed — now airborne!','hi');
+    if(prev.on_ground&&!ac.on_ground){
+      takeoffTimes[ac.hex]=new Date();
+      addLog('✈  Departed — now airborne!','hi');
+    }
     else if(!prev.on_ground&&ac.on_ground) addLog('🛬 Landed — on ground.','hi');
     else if(!ac.on_ground){
       const vr=ac.baro_rate??0;
-      const alt=Math.round(ac.alt_baro??0).toLocaleString();
-      const spd=Math.round(ac.gs??0);
+      const alt=ftToKm(ac.alt_baro??0).toFixed(1);
+      const spd=Math.round(ktToKmh(ac.gs??0));
       if(ac.emergency&&ac.emergency!=='none') addLog(`⚠ Emergency: ${ac.emergency}`,'em');
-      else if(vr>300)  addLog(`↑ Climbing · ${alt} ft · ${spd} kn`);
-      else if(vr<-300) addLog(`↓ Descending · ${alt} ft · ${spd} kn`);
-      else             addLog(`→ Cruising · ${alt} ft · ${spd} kn`);
+      else if(vr>300)  addLog(`↑ Climbing · ${alt} km · ${spd} km/h`);
+      else if(vr<-300) addLog(`↓ Descending · ${alt} km · ${spd} km/h`);
+      else             addLog(`→ Cruising · ${alt} km · ${spd} km/h`);
     } else addLog(`On ground · Squawk ${ac.squawk||'—'}`);
   } else {
-    const alt=Math.round(ac.alt_baro??0).toLocaleString();
-    addLog(ac.on_ground?`On ground · Squawk ${ac.squawk||'—'}`:`Airborne · ${alt} ft · ${Math.round(ac.gs??0)} kn`);
+    const alt=ftToKm(ac.alt_baro??0).toFixed(1);
+    addLog(ac.on_ground?`On ground · Squawk ${ac.squawk||'—'}`:`Airborne · ${alt} km · ${Math.round(ktToKmh(ac.gs??0))} km/h`);
   }
   lastTrkSt={...ac};
   } finally {
@@ -1168,6 +1256,16 @@ qs('#sCl').addEventListener('click',()=>{
 
 // ── EVENTS ───────────────────────────────────────────────────
 qs('#clsBtn').addEventListener('click',closePanel);
+qs('#trBtn').addEventListener('click',()=>{
+  panelTransparent=!panelTransparent;
+  localStorage.setItem('rtdn_panelTransparent', panelTransparent?'1':'0');
+  applyPanelTransparency();
+});
+function applyPanelTransparency(){
+  qs('#panel').style.setProperty('--panel-alpha', panelTransparent?'0.55':'0.94');
+  qs('#trBtn').classList.toggle('on', panelTransparent);
+}
+applyPanelTransparency();
 qs('#trkBtn').addEventListener('click',()=>{
   if(!selHex) return;
   trkHex===selHex?stopTrack():startTrack(selHex);
@@ -1179,44 +1277,38 @@ qs('#rfBtn').addEventListener('click',async()=>{
 
 
 
-// ── FR24 BACKGROUND ROUTE MERGE ─────────────────────────────
-// Tries FR24 direct then 3 different CORS proxies until one works
-// Only ONE proxy fallback (allorigins tends to be the most reliable free
-// option) instead of chaining 3 — each dead proxy we tried added several
-// seconds of guaranteed-failed requests on every refresh/pan/panel-open.
-async function fetchFR24WithProxies(fr24url){
-  try{ return await getJSON(fr24url, 6000); } catch{}
-  try{ return await getJSON(`https://api.allorigins.win/raw?url=${encodeURIComponent(fr24url)}`, 7000); } catch{}
-  return null;
+// ── ROUTE DATA (adsbdb.com — free, keyless, CORS-enabled) ──────
+// Previously this scraped FlightRadar24's unofficial feed through public
+// CORS proxies, which are unreliable and rate-limited — that's why routes
+// almost never showed. adsbdb.com is a purpose-built, CORS-friendly, no-key
+// public API for exactly this lookup (callsign → origin/destination
+// airport with full name/city/coords), so it works directly from a static
+// GitHub Pages site with no proxy needed.
+async function fetchRoute(callsign){
+  const cs=(callsign||'').trim().toUpperCase();
+  if(!cs) return null;
+  if(cs in routeCache) return routeCache[cs];
+  try{
+    const d=await getJSON(`https://api.adsbdb.com/v0/callsign/${encodeURIComponent(cs)}`,6000);
+    const fr=d?.response?.flightroute;
+    if(!fr){ return routeCache[cs]=null; }
+    return routeCache[cs]={
+      origin:fr.origin||null, destination:fr.destination||null,
+      airline:fr.airline?.name||null,
+    };
+  }catch(e){ console.warn('adsbdb lookup failed',cs,e); return null; } // don't cache network errors — retry next time
 }
 
-async function mergeFR24Routes(){
-  if(mergeInFlight) return;           // never stack overlapping route-merge calls
-  mergeInFlight=true;
-  const b=map.getBounds();
-  const N=b.getNorth().toFixed(2),S=b.getSouth().toFixed(2);
-  const W=b.getWest().toFixed(2),E=b.getEast().toFixed(2);
-  const fr24u=`https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=${N},${S},${W},${E}&faa=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`;
-  try{
-    const d = await fetchFR24WithProxies(fr24u);
-    if(!d){ mergeInFlight=false; return; }
-    const ac=normFR24(d,'FlightRadar24');
-    let updated=false;
-    for(const a of ac){
-      if(!a.hex) continue;
-      const key=Object.keys(cache).find(k=>k===a.hex||k===a.hex.toLowerCase());
-      if(key){
-        if(a.orig_iata&&!cache[key].orig_iata){ cache[key].orig_iata=a.orig_iata; updated=true; }
-        if(a.dest_iata&&!cache[key].dest_iata){ cache[key].dest_iata=a.dest_iata; updated=true; }
-        if(a.ownOp&&!cache[key].ownOp) cache[key].ownOp=a.ownOp;
-      }
-    }
-    if(updated&&selHex&&cache[selHex]){
-      fillPanel(cache[selHex]);
-      if(trkHex===selHex) drawRoute(cache[selHex]);
-    }
-  }catch(e){ /* all sources failed silently */ }
-  finally{ mergeInFlight=false; }
+async function mergeRoute(hex){
+  const ac=cache[hex];
+  if(!ac||!ac.flight) return;
+  const r=await fetchRoute(ac.flight);
+  if(!r) return;
+  if(cache[hex]!==ac) return;   // aircraft data changed underneath us
+  ac.routeOrig=r.origin; ac.routeDest=r.destination;
+  if(r.airline&&!ac.ownOp) ac.ownOp=r.airline;
+  if(selHex===hex) fillPanel(ac);
+  if(trkHex===hex) drawRoute(ac);
 }
 
 // ── MAIN LOOP ────────────────────────────────────────────────
@@ -1228,10 +1320,6 @@ async function load(){
     renderAll(result);
     qs('#ldr').classList.add('gone');
     renderAirports();
-    // FR24 route data is best-effort and slow (blocked host + proxy fallback),
-    // so only refresh it every 3rd cycle (~30s) instead of every single load.
-    loadCycle++;
-    if(loadCycle%3===0) mergeFR24Routes();
   } finally {
     loadInFlight=false;
   }
