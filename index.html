@@ -21,7 +21,8 @@
   --glass-alpha:0.6;--panel-blur:20px;
 }
 *,::before,::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--sans)}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--sans);
+  cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cpath d='M3 2 L25 12 L14 16 L10 25 Z' fill='%2300d4ff' stroke='%23070b12' stroke-width='1.4' stroke-linejoin='round'/%3E%3C/svg%3E") 3 2, pointer}
 body{position:relative}
 
 /* HEADER — floating glass bar over the map */
@@ -321,9 +322,10 @@ header>*{position:relative;z-index:1}
 
 /* Toast */
 #toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
-  background:var(--panel);border:1px solid var(--b1);border-radius:var(--r-pill);
-  padding:8px 16px;font-family:var(--mono);font-size:0.81rem;color:var(--txt);
-  letter-spacing:1px;opacity:0;pointer-events:none;transition:opacity .3s var(--ease);z-index:9999}
+  background:var(--panel);border:1px solid var(--b1);border-radius:var(--r-lg);
+  padding:10px 18px;font-family:var(--sans);font-size:0.81rem;color:var(--txt);
+  letter-spacing:.3px;line-height:1.4;text-align:center;max-width:min(420px,86vw);
+  opacity:0;pointer-events:none;transition:opacity .3s var(--ease);z-index:9999}
 #toast.show{opacity:1}
 
 /* Tooltip override */
@@ -1477,7 +1479,7 @@ async function performSearch(qRaw){
     }
   }
 
-  toast('Not currently broadcasting — on the ground, out of coverage, or not yet airborne.');
+  toast('Not currently broadcasting — on the ground, out of coverage, or not yet airborne. Tip: some airlines use an ATC callsign unrelated to the flight number — try that instead if you know it.', 5500);
   return false;
 }
 
