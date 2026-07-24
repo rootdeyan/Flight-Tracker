@@ -614,6 +614,8 @@ let selHex=null, trkHex=null;
 let refreshTmr=null, trackTmr=null, lastTrkSt=null;
 let searchQ='', failCount=0, currentSrc='';
 let routeLine=null, aptLayerGroup=null, followMode=false;
+let loadInFlight=false, mergeInFlight=false, pollInFlight=false, loadCycle=0;
+const photoCache={};
 
 // ── MAP ─────────────────────────────────────────────────────
 function initMap(){
@@ -737,10 +739,6 @@ async function fetchView(){
   const nmi=Math.min(Math.round(
     L.latLng(b.getNorth(),b.getWest())
      .distanceTo(L.latLng(b.getSouth(),b.getEast()))/1852/2),250);
-  const N=b.getNorth().toFixed(2),S=b.getSouth().toFixed(2);
-  const W=b.getWest().toFixed(2),E=b.getEast().toFixed(2);
-  const fr24url=`https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=${N},${S},${W},${E}&faa=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`;
-
   const mkAttempt=(p)=>p.then(r=>{ if(!r?.ac?.length) throw 0; return r; });
 
   const attempts=[
@@ -753,13 +751,11 @@ async function fetchView(){
     // airplanes.live
     mkAttempt(getJSON(`https://api.airplanes.live/v2/point/${lat}/${lon}/${nmi}`,7000)
       .then(d=>({src:'airplanes.live',ac:normADSB(d?.ac,'airplanes.live')}))),
-    // FR24 direct (has route data)
-    mkAttempt(getJSON(fr24url,9000)
-      .then(d=>({src:'FlightRadar24',ac:normFR24(d,'FlightRadar24')}))),
-    // FR24 via CORS proxy (fallback for route data)
-    mkAttempt(getJSON(`https://corsproxy.io/?${encodeURIComponent(fr24url)}`,11000)
-      .then(d=>({src:'FR24-proxy',ac:normFR24(d,'FR24-proxy')}))),
   ];
+  // Note: FR24 (route/origin-destination data) is intentionally NOT raced here.
+  // It's handled by the separate, throttled mergeFR24Routes() — racing it on
+  // every single refresh spawned uncancellable background requests that piled
+  // up on pan/zoom and contributed to the flakiness.
 
   // Hard overall timeout — loader will ALWAYS hide within 12s
   const timeout=new Promise(res=>setTimeout(()=>res(null),12000));
@@ -827,15 +823,17 @@ async function fetchCS(cs){
 
 // Photo from planespotters.net (free, CORS-ok, no key)
 async function fetchPhoto(hex){
+  if(hex in photoCache) return photoCache[hex];  // avoid refetching on reselect
   try{
     const ctrl=new AbortController();
-    setTimeout(()=>ctrl.abort(),8000);
+    const tid=setTimeout(()=>ctrl.abort(),8000);
     const r=await fetch(`https://api.planespotters.net/pub/photos/hex/${hex.toLowerCase()}`,
       {signal:ctrl.signal,credentials:'omit',mode:'cors'});
-    if(!r.ok) return null;
+    clearTimeout(tid);
+    if(!r.ok){ console.warn('planespotters HTTP',r.status,hex); return photoCache[hex]=null; }
     const d=await r.json();
-    return d?.photos?.[0]||null;
-  }catch{return null;}
+    return photoCache[hex]=(d?.photos?.[0]||null);
+  }catch(e){ console.warn('planespotters fetch failed',hex,e); return null; } // don't cache network errors — retry next time
 }
 
 // ── RENDER ───────────────────────────────────────────────────
@@ -1082,7 +1080,9 @@ function setTrkBtn(on){
 }
 
 async function pollTrack(){
-  if(!trkHex) return;
+  if(!trkHex || pollInFlight) return;
+  pollInFlight=true;
+  try{
   const ac=await fetchOne(trkHex);
   if(!ac){ addLog('No signal — out of ADS-B coverage.','wn'); return; }
 
@@ -1119,6 +1119,9 @@ async function pollTrack(){
     addLog(ac.on_ground?`On ground · Squawk ${ac.squawk||'—'}`:`Airborne · ${alt} ft · ${Math.round(ac.gs??0)} kn`);
   }
   lastTrkSt={...ac};
+  } finally {
+    pollInFlight=false;
+  }
 }
 
 function addLog(msg,cls=''){
@@ -1178,29 +1181,25 @@ qs('#rfBtn').addEventListener('click',async()=>{
 
 // ── FR24 BACKGROUND ROUTE MERGE ─────────────────────────────
 // Tries FR24 direct then 3 different CORS proxies until one works
-const PROXIES = [
-  u=>`https://corsproxy.io/?${encodeURIComponent(u)}`,
-  u=>`https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  u=>`https://thingproxy.freeboard.io/fetch/${u}`,
-];
+// Only ONE proxy fallback (allorigins tends to be the most reliable free
+// option) instead of chaining 3 — each dead proxy we tried added several
+// seconds of guaranteed-failed requests on every refresh/pan/panel-open.
 async function fetchFR24WithProxies(fr24url){
-  // Try direct first
-  try{ return await getJSON(fr24url, 7000); } catch{}
-  // Try each proxy
-  for(const proxy of PROXIES){
-    try{ return await getJSON(proxy(fr24url), 8000); } catch{}
-  }
+  try{ return await getJSON(fr24url, 6000); } catch{}
+  try{ return await getJSON(`https://api.allorigins.win/raw?url=${encodeURIComponent(fr24url)}`, 7000); } catch{}
   return null;
 }
 
 async function mergeFR24Routes(){
+  if(mergeInFlight) return;           // never stack overlapping route-merge calls
+  mergeInFlight=true;
   const b=map.getBounds();
   const N=b.getNorth().toFixed(2),S=b.getSouth().toFixed(2);
   const W=b.getWest().toFixed(2),E=b.getEast().toFixed(2);
   const fr24u=`https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=${N},${S},${W},${E}&faa=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=0&estimated=1&maxage=14400&gliders=0&stats=0`;
   try{
     const d = await fetchFR24WithProxies(fr24u);
-    if(!d) return;
+    if(!d){ mergeInFlight=false; return; }
     const ac=normFR24(d,'FlightRadar24');
     let updated=false;
     for(const a of ac){
@@ -1217,16 +1216,25 @@ async function mergeFR24Routes(){
       if(trkHex===selHex) drawRoute(cache[selHex]);
     }
   }catch(e){ /* all sources failed silently */ }
+  finally{ mergeInFlight=false; }
 }
 
 // ── MAIN LOOP ────────────────────────────────────────────────
 async function load(){
-  const result=await fetchView();
-  renderAll(result);
-  qs('#ldr').classList.add('gone');
-  renderAirports();
-  // Fire FR24 route merge in background (non-blocking)
-  mergeFR24Routes();
+  if(loadInFlight) return;   // moveend + the 10s interval can otherwise fire together
+  loadInFlight=true;
+  try{
+    const result=await fetchView();
+    renderAll(result);
+    qs('#ldr').classList.add('gone');
+    renderAirports();
+    // FR24 route data is best-effort and slow (blocked host + proxy fallback),
+    // so only refresh it every 3rd cycle (~30s) instead of every single load.
+    loadCycle++;
+    if(loadCycle%3===0) mergeFR24Routes();
+  } finally {
+    loadInFlight=false;
+  }
 }
 
 async function boot(){
