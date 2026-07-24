@@ -411,17 +411,14 @@ header>*{position:relative;z-index:1}
 }
 .leaflet-tooltip::before{display:none!important}
 
-/* Country name labels — plain text, no pill background, distinct from the
-   aircraft/airport tooltip style above */
-.leaflet-tooltip.countryLbl{
-  background:none!important;border:none!important;padding:0!important;
-  color:#c3d6ee!important;font-family:var(--sans)!important;font-size:11px!important;
-  font-weight:500!important;letter-spacing:.3px!important;
-  text-shadow:0 0 4px #070b12,0 0 4px #070b12,0 1px 3px #070b12!important;
-  pointer-events:none!important
+/* Country name labels — lightweight divIcon, plain text, no pill background */
+.countryLbl{
+  position:absolute;transform:translate(-50%,-50%);
+  color:#c3d6ee;font-family:var(--sans);font-size:11px;
+  font-weight:500;letter-spacing:.3px;white-space:nowrap;
+  text-shadow:0 0 4px #070b12,0 0 4px #070b12,0 1px 3px #070b12;
+  pointer-events:none
 }
-#map.hideCountryLbl .countryLbl{display:none!important}
-
 @media(max-width:620px){
   #panel,#favPanel,#filterPanel{left:10px;right:10px;top:84px;bottom:10px;width:auto}
   .hstats{display:none}
@@ -858,22 +855,57 @@ function initMap(){
 // they stay crisp and clearly visible regardless of the dark tile filter.
 // Natural Earth 1:110m boundaries via datasets/geo-countries (public domain,
 // actively maintained), served through jsdelivr's CDN.
+let countryLabelData=[];        // [{name,lat,lon}] — computed once after borders load
+let countryLabelGroup=null;
+
 async function loadCountryBorders(){
   try{
     const geo=await getJSON('https://cdn.jsdelivr.net/gh/datasets/geo-countries/data/countries.geojson',15000);
+    // Canvas renderer instead of the SVG default — SVG has to rebuild a DOM
+    // path per polygon on every zoom frame, which is what was causing the
+    // lag; Canvas just re-rasterizes, far cheaper for ~250 complex shapes.
+    const renderer=L.canvas({padding:0.5});
     L.geoJSON(geo,{
       interactive:false,
-      style:{color:'#3d5f8a',weight:1.5,opacity:.85,fill:false},
-      onEachFeature:(feature,layer)=>{
-        const p=feature.properties||{};
-        const name=p.ADMIN||p.admin||p.name||p.NAME||p.NAME_EN||p.name_long||'';
-        if(name) layer.bindTooltip(name,{permanent:true,direction:'center',className:'countryLbl',interactive:false});
-      }
+      renderer,
+      style:{color:'#3d5f8a',weight:1.5,opacity:.85,fill:false}
     }).addTo(map);
-    const toggleLabels=()=>qs('#map').classList.toggle('hideCountryLbl', map.getZoom()<4);
-    toggleLabels();
-    map.on('zoomend', toggleLabels);
+
+    countryLabelData=geo.features.map(f=>{
+      const p=f.properties||{};
+      const name=p.ADMIN||p.admin||p.name||p.NAME||p.NAME_EN||p.name_long||'';
+      if(!name) return null;
+      try{
+        const c=L.geoJSON(f).getBounds().getCenter();
+        return {name,lat:c.lat,lon:c.lng};
+      }catch{ return null; }
+    }).filter(Boolean);
+
+    countryLabelGroup=L.layerGroup().addTo(map);
+    renderCountryLabels();
+    map.on('zoomend', debounce(renderCountryLabels,150));
+    map.on('moveend', debounce(renderCountryLabels,150));
   }catch(e){ console.warn('Country border overlay failed to load',e); }
+}
+
+// Lazy, viewport-only label rendering — same pattern as renderAirports()
+// below. Only the handful of countries actually on screen get a DOM node,
+// instead of binding all ~250 permanently regardless of visibility.
+function renderCountryLabels(){
+  if(!countryLabelGroup) return;
+  countryLabelGroup.clearLayers();
+  if(map.getZoom()<4) return;
+  const bounds=map.getBounds();
+  for(const c of countryLabelData){
+    if(!bounds.contains([c.lat,c.lon])) continue;
+    L.marker([c.lat,c.lon],{
+      icon:L.divIcon({
+        html:`<div class="countryLbl">${c.name}</div>`,
+        className:'', iconSize:[0,0], iconAnchor:[0,0]
+      }),
+      interactive:false, zIndexOffset:-200
+    }).addTo(countryLabelGroup);
+  }
 }
 
 // ── AIRPORT MARKERS ──────────────────────────────────────────
@@ -1029,7 +1061,7 @@ function mkIcon(ac, sel){
   const ring = sel ? `<circle class="acRing" cx="16" cy="16" r="13" stroke="${col}" stroke-width="1.6" fill="none"/>` : '';
 
   const body = kind==='heli'
-    ? `<g fill="${col}" opacity="${op}">
+    ? `<g fill="${col}" opacity="${op}" stroke="#070b12" stroke-width=".5" stroke-linejoin="round">
         <ellipse cx="16" cy="17" rx="4.2" ry="6"/>
         <rect x="15.3" y="6" width="1.4" height="11"/>
         <rect x="4" y="15.7" width="24" height="1.2" rx=".6" transform="rotate(0 16 16)"/>
@@ -1037,7 +1069,7 @@ function mkIcon(ac, sel){
         <rect x="15.5" y="17" width="1" height="10"/>
         <rect x="13.5" y="26" width="5" height="1" rx=".5"/>
       </g>`
-    : `<g fill="${col}" opacity="${op}">
+    : `<g fill="${col}" opacity="${op}" stroke="#070b12" stroke-width=".5" stroke-linejoin="round">
         <ellipse cx="16" cy="5.5" rx="2.3" ry="3.5"/>
         <rect x="13.7" y="7" width="4.6" height="16" rx="2.3"/>
         <path d="M17.8 13.5 L30 19 L28 20.5 L17.8 17Z"/>
