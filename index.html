@@ -718,6 +718,7 @@ let lastRefreshAt=Date.now();
 const photoCache={};
 const takeoffTimes={};      // hex -> Date, only set from what we personally observed
 const routeCache={};        // callsign -> adsbdb route response (or null)
+const routeFetchInFlight=new Set();   // callsigns currently being looked up
 let trackPath=[], trailLine=null;   // actual traveled trail while tracking
 let favorites={}; try{ favorites=JSON.parse(localStorage.getItem('rtdn_favorites')||'{}'); }catch{ favorites={}; }
 let allAirports=null;       // full mwgg/Airports dataset, lazy-loaded
@@ -921,11 +922,13 @@ async function mergeExtraSources(attempts, wonName, cycleId){
           }
         } else {
           lastSeenCycle[ac.hex]=cycleId;
-          if(!existing.flight && ac.flight) existing.flight=ac.flight;
+          const gotFlight=!existing.flight && ac.flight;
+          if(gotFlight) existing.flight=ac.flight;
           if(!existing.r && ac.r) existing.r=ac.r;
           if(!existing.t && ac.t) existing.t=ac.t;
           if(!existing.squawk && ac.squawk) existing.squawk=ac.squawk;
           if(existing.track==null && ac.track!=null) existing.track=ac.track;
+          if(gotFlight && selHex===ac.hex) fillPanel(existing);
         }
       }
     }
@@ -1065,9 +1068,20 @@ function renderAll(result){
     // heading to 0° made aircraft visually snap to "pointing north" on any
     // momentary data gap, which read as misaligned.
     if(ac.track==null && cache[ac.hex]?.track!=null) ac.track=cache[ac.hex].track;
+    // Same for the callsign: ADS-B broadcasts position and identification as
+    // separate messages, so a given snapshot can have valid coordinates but
+    // a still-blank callsign. Losing it mid-flight (it never legitimately
+    // changes) was the actual cause of routes silently failing to look up.
+    if(!ac.flight && cache[ac.hex]?.flight) ac.flight=cache[ac.hex].flight;
     cache[ac.hex]=ac;
     lastSeenCycle[ac.hex]=loadCycleId;
     vis++;
+
+    // Refresh the open panel for the selected aircraft on every regular
+    // refresh (not just while actively tracking) — this is what lets a
+    // route lookup that couldn't fire on first selection (blank callsign
+    // that instant) retry automatically once the callsign shows up.
+    if(ac.hex===selHex) fillPanel(ac);
 
     const isSel=ac.hex===selHex;
     const emg=ac.emergency&&ac.emergency!=='none';
@@ -1591,6 +1605,8 @@ async function fetchRoute(callsign){
   const cs=(callsign||'').trim().toUpperCase();
   if(!cs) return null;
   if(cs in routeCache) return routeCache[cs];
+  if(routeFetchInFlight.has(cs)) return undefined;   // already being fetched — caller's re-render will pick it up
+  routeFetchInFlight.add(cs);
   try{
     const d=await getJSON(`https://api.adsbdb.com/v0/callsign/${encodeURIComponent(cs)}`,6000);
     const fr=d?.response?.flightroute;
@@ -1600,6 +1616,7 @@ async function fetchRoute(callsign){
       airline:fr.airline?.name||null,
     };
   }catch(e){ console.warn('adsbdb lookup failed',cs,e); return null; } // don't cache network errors — retry next time
+  finally{ routeFetchInFlight.delete(cs); }
 }
 
 // ── MAIN LOOP ────────────────────────────────────────────────
