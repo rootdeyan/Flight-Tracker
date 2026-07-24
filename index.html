@@ -193,12 +193,50 @@ header>*{position:relative;z-index:1}
   padding:3px;flex-shrink:0}
 .favRowRm:hover{color:var(--red)}
 
-/* Desktop/tablet: favorites panel docks where the detail panel normally
-   sits when it's closed, and shifts alongside it once it opens */
+/* Filter header button — same treatment as favorites */
+#filterBtn{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-pill);
+  color:var(--dim);cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  transition:all .2s var(--ease);flex-shrink:0}
+#filterBtn:hover,#filterBtn.on{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.08)}
+
+/* Filter panel — shares favPanel's exact position/size (they're mutually
+   exclusive, so no need for separate screen real estate) */
+#filterPanel{position:fixed;top:170px;left:14px;bottom:14px;width:270px;
+  background:color-mix(in srgb, var(--panel) calc(var(--glass-alpha)*100%), transparent);
+  backdrop-filter:blur(var(--panel-blur));-webkit-backdrop-filter:blur(var(--panel-blur));
+  border:1px solid rgba(255,255,255,.07);border-radius:var(--r-lg);
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+  display:flex;flex-direction:column;overflow:hidden;z-index:850;
+  transition:transform .3s var(--ease),opacity .25s var(--ease)}
+#filterPanel.shut{transform:translateX(-16px) scale(.98);opacity:0;pointer-events:none}
+#filterPanel::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:rgba(4,7,13,.55);z-index:0;border-radius:inherit}
+#filterPanel>*{position:relative;z-index:1}
+.filterBody{padding:14px;overflow-y:auto}
+.filterLbl{display:block;font-family:var(--cond);font-size:.7rem;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:7px}
+#airlineSel{width:100%;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r-sm);color:var(--txt);font-family:var(--sans);font-size:.8rem;
+  padding:8px 10px;outline:none;cursor:pointer;transition:border-color .2s var(--ease)}
+#airlineSel:focus{border-color:var(--cyan)}
+.filterChips{display:flex;flex-direction:column;gap:7px}
+.chipBtn{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.03);
+  border:1px solid rgba(255,255,255,.08);border-radius:var(--r-sm);color:var(--dim);
+  font-family:var(--sans);font-size:.78rem;padding:9px 12px;cursor:pointer;
+  transition:all .2s var(--ease);text-align:left}
+.chipBtn i{width:14px;text-align:center}
+.chipBtn[data-cat="heli"].on{border-color:#a78bfa;color:#a78bfa;background:rgba(167,139,250,.1)}
+.chipBtn[data-cat="military"].on{border-color:#8f9779;color:#8f9779;background:rgba(143,151,121,.1)}
+.chipBtn[data-cat="private"].on{border-color:#f472b6;color:#f472b6;background:rgba(244,114,182,.1)}
+.filterHint{font-size:.7rem;color:var(--dim);line-height:1.5;margin-top:14px}
+
+/* Desktop/tablet: favorites/filter panels dock where the detail panel
+   normally sits when it's closed, and shift alongside it once it opens */
 @media(min-width:901px){
-  #favPanel{top:88px;left:auto;right:14px;
+  #favPanel,#filterPanel{top:88px;left:auto;right:14px;
     transition:transform .3s var(--ease),opacity .25s var(--ease),right .3s var(--ease)}
-  body:has(#panel:not(.shut)) #favPanel{right:calc(340px + 28px)}
+  body:has(#panel:not(.shut)) #favPanel,
+  body:has(#panel:not(.shut)) #filterPanel{right:calc(340px + 28px)}
 }
 
 /* Empty */
@@ -348,7 +386,7 @@ header>*{position:relative;z-index:1}
 .leaflet-tooltip::before{display:none!important}
 
 @media(max-width:620px){
-  #panel,#favPanel{left:10px;right:10px;top:84px;bottom:10px;width:auto}
+  #panel,#favPanel,#filterPanel{left:10px;right:10px;top:84px;bottom:10px;width:auto}
   .hstats{display:none}
   .srch{max-width:155px}
   header{left:10px;right:10px;top:10px;padding:9px 14px}
@@ -381,6 +419,9 @@ header>*{position:relative;z-index:1}
     <div class="hst">AIRCRAFT&nbsp;<b id="hAc">—</b></div>
     <div class="hst">UPDATED&nbsp;<b id="hTime">—</b></div>
   </div>
+  <button id="filterBtn" title="Filter by airline or aircraft type">
+    <i class="fa-solid fa-filter" style="font-size:.72rem"></i>
+  </button>
   <button id="favBtn" title="Favorites">
     <i class="fa-solid fa-star" style="font-size:.72rem"></i>
   </button>
@@ -402,6 +443,24 @@ header>*{position:relative;z-index:1}
   <div id="favPanel" class="shut">
     <div class="favSecHdr"><span>Favorites</span></div>
     <div class="favList" id="favList"></div>
+  </div>
+
+  <div id="filterPanel" class="shut">
+    <div class="favSecHdr">
+      <span>Filters</span>
+      <button id="filterClearBtn" title="Clear filters"><i class="fa-solid fa-rotate-left"></i></button>
+    </div>
+    <div class="filterBody">
+      <label class="filterLbl">Airline</label>
+      <select id="airlineSel"><option value="">All Airlines</option></select>
+      <label class="filterLbl" style="margin-top:16px">Aircraft Type</label>
+      <div class="filterChips">
+        <button class="chipBtn" data-cat="heli"><i class="fa-solid fa-helicopter"></i> Helicopters</button>
+        <button class="chipBtn" data-cat="military"><i class="fa-solid fa-jet-fighter"></i> Military</button>
+        <button class="chipBtn" data-cat="private"><i class="fa-solid fa-plane"></i> Private Jets</button>
+      </div>
+      <p class="filterHint">Type filters combine (select several); airline narrows further on top.</p>
+    </div>
   </div>
 
   <div id="panel" class="shut">
@@ -527,6 +586,7 @@ header>*{position:relative;z-index:1}
 
 // ── HELPERS (must be first — used throughout) ───────────────
 const qs = s => document.querySelector(s);
+const qsa = s => document.querySelectorAll(s);
 function showErr(v){ qs('#errB').style.display = v ? 'flex' : 'none'; }
 function toast(msg, ms=2800){
   const t=qs('#toast'); t.textContent=msg; t.classList.add('show');
@@ -731,6 +791,8 @@ const routeFetchInFlight=new Map();   // callsign -> the in-flight fetch promise
 const routeLastAttempt={};  // callsign -> timestamp of last attempt (hard circuit-breaker)
 let trackPath=[], trailLine=null;   // actual traveled trail while tracking
 let favorites={}; try{ favorites=JSON.parse(localStorage.getItem('rtdn_favorites')||'{}'); }catch{ favorites={}; }
+let activeAirlineFilter='';         // ICAO airline code, or '' for all
+const activeCategoryFilter=new Set();   // subset of {'heli','military','private'}
 let allAirports=null;       // full mwgg/Airports dataset, lazy-loaded
 
 // ── MAP ─────────────────────────────────────────────────────
@@ -828,6 +890,48 @@ function classifyAircraft(ac){
   if(cat==='A7') return 'heli';
   if(BIZJET_TYPES.has((ac.t||'').toUpperCase())) return 'private';
   return 'normal';
+}
+
+// ── FILTERS (airline + aircraft type) ────────────────────────
+function matchesFilter(ac){
+  if(activeCategoryFilter.size && !activeCategoryFilter.has(classifyAircraft(ac))) return false;
+  if(activeAirlineFilter){
+    const cs=(ac.flight||'').trim().toUpperCase();
+    if(!cs.startsWith(activeAirlineFilter)) return false;
+  }
+  return true;
+}
+
+// Re-evaluates every currently-known aircraft against the active filters
+// and adds/removes markers accordingly — instant, no network round-trip,
+// since it just replays what's already in cache.
+function applyFilters(){
+  let vis=0;
+  for(const hex in cache){
+    const ac=cache[hex];
+    if(ac.lat==null) continue;
+    const show=matchesFilter(ac)||hex===selHex||hex===trkHex;
+    if(show){
+      vis++;
+      if(!markers[hex]){
+        markers[hex]=L.marker([ac.lat,ac.lon],{icon:mkIcon(ac,hex===selHex)})
+          .addTo(map)
+          .bindTooltip((ac.flight||ac.hex).toUpperCase(),{direction:'top',offset:[0,-8]})
+          .on('click',()=>selectAc(hex));
+      }
+    } else if(markers[hex]){
+      map.removeLayer(markers[hex]); delete markers[hex];
+    }
+  }
+  qs('#visCnt').textContent=vis.toLocaleString();
+  qs('#hAc').textContent=vis.toLocaleString();
+}
+
+function populateAirlineSelect(){
+  const sel=qs('#airlineSel');
+  const entries=Object.entries(AL).sort((a,b)=>a[1].localeCompare(b[1]));
+  sel.innerHTML='<option value="">All Airlines</option>'+
+    entries.map(([icao,name])=>`<option value="${icao}">${name}</option>`).join('');
 }
 
 // ── AIRCRAFT ICON ────────────────────────────────────────────
@@ -965,7 +1069,7 @@ async function mergeExtraSources(attempts, wonName, cycleId){
         const existing=cache[ac.hex];
         if(!existing){
           cache[ac.hex]=ac; lastSeenCycle[ac.hex]=cycleId; added=true;
-          if(!markers[ac.hex]){
+          if(!markers[ac.hex] && matchesFilter(ac)){
             markers[ac.hex]=L.marker([ac.lat,ac.lon],
               {icon:mkIcon(ac,false)})
               .addTo(map)
@@ -1131,7 +1235,6 @@ function renderAll(result){
     if(!ac.flight && cache[ac.hex]?.flight) ac.flight=cache[ac.hex].flight;
     cache[ac.hex]=ac;
     lastSeenCycle[ac.hex]=loadCycleId;
-    vis++;
 
     // Refresh the open panel for the selected aircraft on every regular
     // refresh (not just while actively tracking) — this is what lets a
@@ -1140,6 +1243,13 @@ function renderAll(result){
     if(ac.hex===selHex) fillPanel(ac);
 
     const isSel=ac.hex===selHex;
+    const show=matchesFilter(ac)||isSel||ac.hex===trkHex;
+
+    if(!show){
+      if(markers[ac.hex]){ map.removeLayer(markers[ac.hex]); delete markers[ac.hex]; }
+      continue;
+    }
+    vis++;
     const icon=mkIcon(ac,isSel);
 
     if(markers[ac.hex]){
@@ -1188,7 +1298,7 @@ function openPanel(ac){
   qs('#emp').style.display='none';
   qs('#det').style.display='flex';
   qs('#panel').classList.remove('shut');
-  if(isNarrowViewport()) qs('#favPanel').classList.add('shut');   // avoid overlap on phones
+  if(isNarrowViewport()){ qs('#favPanel').classList.add('shut'); qs('#filterPanel').classList.add('shut'); }   // avoid overlap on phones
   fillPanel(ac);   // fillRoute() inside this self-triggers the route lookup
   doPhoto(ac.hex);
 }
@@ -1616,9 +1726,41 @@ qs('#favBtn').addEventListener('click',()=>{
   const opening=qs('#favPanel').classList.contains('shut');
   qs('#favPanel').classList.toggle('shut');
   qs('#favBtn').classList.toggle('on', opening);
-  if(opening && isNarrowViewport()) qs('#panel').classList.add('shut');   // avoid overlap on phones
+  if(opening){
+    qs('#filterPanel').classList.add('shut'); qs('#filterBtn').classList.remove('on');   // shares the same slot
+    if(isNarrowViewport()) qs('#panel').classList.add('shut');   // avoid overlap on phones
+  }
 });
 qs('#favToggle').addEventListener('click',()=>{ if(selHex) toggleFavorite(selHex); });
+
+qs('#filterBtn').addEventListener('click',()=>{
+  const opening=qs('#filterPanel').classList.contains('shut');
+  qs('#filterPanel').classList.toggle('shut');
+  qs('#filterBtn').classList.toggle('on', opening);
+  if(opening){
+    qs('#favPanel').classList.add('shut'); qs('#favBtn').classList.remove('on');   // shares the same slot
+    if(isNarrowViewport()) qs('#panel').classList.add('shut');   // avoid overlap on phones
+  }
+});
+qs('#airlineSel').addEventListener('change',e=>{
+  activeAirlineFilter=e.target.value;
+  applyFilters();
+});
+qs('.filterChips').addEventListener('click',e=>{
+  const btn=e.target.closest('.chipBtn'); if(!btn) return;
+  const cat=btn.dataset.cat;
+  if(activeCategoryFilter.has(cat)) activeCategoryFilter.delete(cat);
+  else activeCategoryFilter.add(cat);
+  btn.classList.toggle('on');
+  applyFilters();
+});
+qs('#filterClearBtn').addEventListener('click',()=>{
+  activeAirlineFilter=''; qs('#airlineSel').value='';
+  activeCategoryFilter.clear();
+  qsa('.chipBtn').forEach(b=>b.classList.remove('on'));
+  applyFilters();
+});
+populateAirlineSelect();
 
 // Clicking a favorite selects AND tracks it — startTrack() always calls
 // stopTrack() first, so switching favorites never leaves a stale track running.
