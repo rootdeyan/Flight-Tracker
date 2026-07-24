@@ -411,6 +411,17 @@ header>*{position:relative;z-index:1}
 }
 .leaflet-tooltip::before{display:none!important}
 
+/* Country name labels — plain text, no pill background, distinct from the
+   aircraft/airport tooltip style above */
+.leaflet-tooltip.countryLbl{
+  background:none!important;border:none!important;padding:0!important;
+  color:#c3d6ee!important;font-family:var(--sans)!important;font-size:11px!important;
+  font-weight:500!important;letter-spacing:.3px!important;
+  text-shadow:0 0 4px #070b12,0 0 4px #070b12,0 1px 3px #070b12!important;
+  pointer-events:none!important
+}
+#map.hideCountryLbl .countryLbl{display:none!important}
+
 @media(max-width:620px){
   #panel,#favPanel,#filterPanel{left:10px;right:10px;top:84px;bottom:10px;width:auto}
   .hstats{display:none}
@@ -852,8 +863,16 @@ async function loadCountryBorders(){
     const geo=await getJSON('https://cdn.jsdelivr.net/gh/datasets/geo-countries/data/countries.geojson',15000);
     L.geoJSON(geo,{
       interactive:false,
-      style:{color:'#7fa8d9',weight:1.1,opacity:.65,fill:false}
+      style:{color:'#3d5f8a',weight:1.5,opacity:.85,fill:false},
+      onEachFeature:(feature,layer)=>{
+        const p=feature.properties||{};
+        const name=p.ADMIN||p.admin||p.name||p.NAME||p.NAME_EN||p.name_long||'';
+        if(name) layer.bindTooltip(name,{permanent:true,direction:'center',className:'countryLbl',interactive:false});
+      }
     }).addTo(map);
+    const toggleLabels=()=>qs('#map').classList.toggle('hideCountryLbl', map.getZoom()<4);
+    toggleLabels();
+    map.on('zoomend', toggleLabels);
   }catch(e){ console.warn('Country border overlay failed to load',e); }
 }
 
