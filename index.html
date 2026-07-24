@@ -3,19 +3,19 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>RTDN — AirTrackerFree</title>
+<title>RTDN - AirTracker Free</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23070b12'/%3E%3Ccircle cx='16' cy='16' r='10.5' stroke='%2300d4ff' stroke-width='1.4' fill='none' opacity='.55'/%3E%3Cpath d='M20 12L14.5 14.5L12 20L17.5 17.5Z' fill='%2300d4ff'/%3E%3Ccircle cx='16' cy='16' r='1.6' fill='%23070b12'/%3E%3C/svg%3E"/>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>
 :root{
   --bg:#070b12;--panel:#0b1120;--p2:#0d1428;
   --b1:#17243a;--b2:#1e2f4a;
   --cyan:#00d4ff;--green:#00ff9d;--amber:#ffb347;--red:#ff4f6a;
   --txt:#b8d0ee;--dim:#3b5272;--dimm:#56739e;
-  --mono:'Share Tech Mono',monospace;--sans:'Roboto',sans-serif;--cond:'Roboto',sans-serif;
+  --mono:'Roboto',sans-serif;--sans:'Roboto',sans-serif;--cond:'Roboto',sans-serif;
   --r-sm:8px;--r-md:12px;--r-lg:16px;--r-pill:999px;
   --ease:cubic-bezier(.4,0,.2,1);
   --glass-alpha:0.6;--panel-blur:20px;
@@ -36,7 +36,7 @@ header::before{content:'';position:absolute;inset:0;pointer-events:none;
   background:rgba(4,7,13,.55);z-index:0;border-radius:inherit}
 header>*{position:relative;z-index:1}
 .logo{display:flex;align-items:center;gap:9px;flex-shrink:0;user-select:none}
-#logoIco{display:inline-block;animation:sweep 6s linear infinite;filter:drop-shadow(0 0 4px rgba(0,212,255,.5))}
+#logoIco{display:inline-block;filter:drop-shadow(0 0 4px rgba(0,212,255,.5))}
 @keyframes sweep{to{transform:rotate(360deg)}}
 .logo svg{width:26px;height:26px}
 .logo-name{font-family:var(--cond);font-weight:700;font-size:1.15rem;
@@ -191,9 +191,12 @@ header>*{position:relative;z-index:1}
   padding:3px;flex-shrink:0}
 .favRowRm:hover{color:var(--red)}
 
-/* Desktop/tablet: favorites panel sits alongside the right-hand detail panel */
+/* Desktop/tablet: favorites panel docks where the detail panel normally
+   sits when it's closed, and shifts alongside it once it opens */
 @media(min-width:901px){
-  #favPanel{top:88px;left:auto;right:calc(340px + 28px)}
+  #favPanel{top:88px;left:auto;right:14px;
+    transition:transform .3s var(--ease),opacity .25s var(--ease),right .3s var(--ease)}
+  body:has(#panel:not(.shut)) #favPanel{right:calc(340px + 28px)}
 }
 
 /* Empty */
@@ -323,10 +326,6 @@ header>*{position:relative;z-index:1}
   letter-spacing:1px;opacity:0;pointer-events:none;transition:opacity .3s var(--ease);z-index:9999}
 #toast.show{opacity:1}
 
-/* Selected pulse */
-.acsel{animation:acGlow 2s ease-in-out infinite}
-@keyframes acGlow{0%,100%{filter:drop-shadow(0 0 3px #00ff9d)}50%{filter:drop-shadow(0 0 8px #00ff9d)}}
-
 /* Tooltip override */
 .leaflet-tooltip{
   background:rgba(11,17,32,.95)!important;border:1px solid var(--b1)!important;
@@ -358,7 +357,7 @@ header>*{position:relative;z-index:1}
 <header>
   <div class="logo">
     <i class="fa-solid fa-compass" id="logoIco" style="color:#00d4ff;font-size:1.15rem"></i>
-    <div class="logo-name">RTDN<em> · AirTrackerFree</em></div>
+    <div class="logo-name">RTDN<em> - AirTracker Free</em></div>
   </div>
   <div class="hdiv"></div>
   <div class="srch">
@@ -370,14 +369,9 @@ header>*{position:relative;z-index:1}
     <div class="livepill"><div class="ldot"></div>LIVE</div>
     <div class="hst">AIRCRAFT&nbsp;<b id="hAc">—</b></div>
     <div class="hst">UPDATED&nbsp;<b id="hTime">—</b></div>
-    <div class="hst" id="hSrc" style="opacity:.6"></div>
   </div>
-  <button id="favBtn" title="Favorites & recent searches">
+  <button id="favBtn" title="Favorites">
     <i class="fa-solid fa-star" style="font-size:.72rem"></i>
-  </button>
-  <button id="rfBtn">
-    <i class="fa-solid fa-arrows-rotate" style="font-size:.72rem"></i>
-    <span class="btn-label">REFRESH</span>
   </button>
 </header>
 
@@ -766,7 +760,7 @@ function renderAirports(){
     const dot=L.divIcon({
       html:`<div style="position:relative">
         <div style="width:9px;height:9px;background:#ffb347;border:1.5px solid #0b1120;border-radius:50%;box-shadow:0 0 8px rgba(255,179,71,.65)"></div>
-        <div style="position:absolute;left:12px;top:-3px;font-family:'Share Tech Mono',monospace;font-size:10px;font-weight:700;color:#ffb347;white-space:nowrap;text-shadow:0 0 4px #0b1120,0 0 4px #0b1120">${iata}</div>
+        <div style="position:absolute;left:12px;top:-3px;font-family:'Roboto',sans-serif;font-size:10px;font-weight:700;color:#ffb347;white-space:nowrap;text-shadow:0 0 4px #0b1120,0 0 4px #0b1120">${iata}</div>
       </div>`,
       className:'', iconSize:[9,9], iconAnchor:[4,4]
     });
@@ -788,7 +782,7 @@ function renderAirports(){
       const dot=L.divIcon({
         html:`<div style="position:relative">
           <div style="width:4px;height:4px;background:#56739e;border:1px solid #0b1120;border-radius:50%;opacity:.85"></div>
-          ${showLabel&&iata?`<div style="position:absolute;left:7px;top:-4px;font-family:'Share Tech Mono',monospace;font-size:8.5px;color:#56739e;white-space:nowrap;text-shadow:0 0 3px #0b1120,0 0 3px #0b1120">${iata}</div>`:''}
+          ${showLabel&&iata?`<div style="position:absolute;left:7px;top:-4px;font-family:'Roboto',sans-serif;font-size:8.5px;color:#56739e;white-space:nowrap;text-shadow:0 0 3px #0b1120,0 0 3px #0b1120">${iata}</div>`:''}
         </div>`,
         className:'', iconSize:[4,4], iconAnchor:[2,2]
       });
@@ -802,11 +796,16 @@ function renderAirports(){
 // Realistic top-down silhouette: fuselage + wings + stabilizers
 function mkIcon(hdg, sel, gnd, emg){
   const col = emg ? '#ff4f6a' : sel ? '#00ff9d' : gnd ? '#ffb347' : '#00d4ff';
-  const sz  = sel ? 30 : 19;
+  const sz  = sel ? 34 : 19;
   const op  = gnd ? 0.6 : 1;
-  const glw = sel ? `filter:drop-shadow(0 0 7px ${col})` : '';
-  const ring= sel ? `<circle cx="16" cy="16" r="13.5" stroke="${col}" stroke-width=".8" fill="none" opacity=".2"/>` : '';
-  const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" style="${glw}">
+  // A clear pulsing ring — not a glow — marks the actively selected/tracked
+  // aircraft, so it reads unambiguously as "this one is being followed".
+  const ring = sel ? `<circle cx="16" cy="16" r="14" stroke="${col}" stroke-width="1.6" fill="none" opacity=".75">
+      <animate attributeName="r" values="12;15;12" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values=".85;.35;.85" dur="2s" repeatCount="indefinite"/>
+    </circle>` : '';
+  const svg = `<svg width="${sz}" height="${sz}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    ${ring}
     <g fill="${col}" opacity="${op}">
       <ellipse cx="16" cy="5.5" rx="2.3" ry="3.5"/>
       <rect x="13.7" y="7" width="4.6" height="16" rx="2.3"/>
@@ -815,11 +814,10 @@ function mkIcon(hdg, sel, gnd, emg){
       <path d="M17.5 24 L24 27 L23.2 28.5 L16 25.8Z"/>
       <path d="M14.5 24 L8 27 L8.8 28.5 L16 25.8Z"/>
     </g>
-    ${ring}
   </svg>`;
   return L.divIcon({
-    html:`<div style="transform:rotate(${hdg||0}deg);transform-origin:center;line-height:0;display:inline-block">${svg}</div>`,
-    className: sel ? 'acsel' : '',
+    html:`<div style="transform:rotate(${hdg??0}deg);transform-origin:center;line-height:0;display:inline-block">${svg}</div>`,
+    className:'',
     iconSize:[sz,sz], iconAnchor:[sz/2,sz/2]
   });
 }
@@ -848,7 +846,7 @@ async function getJSON(url, ms=FETCH_MS){
 function normADSB(list, src){
   return (Array.isArray(list)?list:[]).filter(a=>a.lat!=null&&a.lon!=null).map(a=>({
     _src:src, hex:a.hex, flight:(a.flight||'').trim(),
-    lat:a.lat, lon:a.lon, track:a.track||0,
+    lat:a.lat, lon:a.lon, track:a.track??null,
     alt_baro:a.alt_baro??a.alt_geom??null, gs:a.gs??null,
     baro_rate:a.baro_rate??null, squawk:a.squawk||'',
     t:a.t||'', r:a.r||'', desc:a.desc||'', ownOp:a.ownOp||'',
@@ -894,7 +892,7 @@ async function fetchOne(hex){
     if(!raw) throw 0;
     return {
       _src:src, hex:raw.hex||hex, flight:(raw.flight||'').trim(),
-      lat:raw.lat??null, lon:raw.lon??null, track:raw.track||0,
+      lat:raw.lat??null, lon:raw.lon??null, track:raw.track??null,
       alt_baro:raw.alt_baro??raw.alt_geom??null, gs:raw.gs??null,
       baro_rate:raw.baro_rate??null, squawk:raw.squawk||'',
       t:raw.t||'', r:raw.r||'', desc:raw.desc||'', ownOp:raw.ownOp||'',
@@ -970,7 +968,6 @@ function renderAll(result){
   failCount=0;
   showErr(false);
   currentSrc=result.src;
-  qs('#hSrc').textContent=`via ${result.src}`;
 
   const seen=new Set();
   let vis=0;
@@ -985,6 +982,10 @@ function renderAll(result){
     // Keep route data if we already have it (FR24 provides it, others may not)
     if(!ac.orig_iata&&cache[ac.hex]?.orig_iata) ac.orig_iata=cache[ac.hex].orig_iata;
     if(!ac.dest_iata&&cache[ac.hex]?.dest_iata) ac.dest_iata=cache[ac.hex].dest_iata;
+    // Keep last-known heading if this update omits it — defaulting a missing
+    // heading to 0° made aircraft visually snap to "pointing north" on any
+    // momentary data gap, which read as misaligned.
+    if(ac.track==null && cache[ac.hex]?.track!=null) ac.track=cache[ac.hex].track;
     cache[ac.hex]=ac;
     vis++;
 
@@ -1311,6 +1312,7 @@ async function pollTrack(){
   const prevCached=cache[ac.hex];
   if(!ac.orig_iata&&prevCached?.orig_iata) ac.orig_iata=prevCached.orig_iata;
   if(!ac.dest_iata&&prevCached?.dest_iata) ac.dest_iata=prevCached.dest_iata;
+  if(ac.track==null && prevCached?.track!=null) ac.track=prevCached.track;
   cache[ac.hex]=ac;
 
   if(selHex===ac.hex) fillPanel(ac);
@@ -1438,10 +1440,6 @@ renderFavPanel();   // initial paint from localStorage
 qs('#trkBtn').addEventListener('click',()=>{
   if(!selHex) return;
   trkHex===selHex?stopTrack():startTrack(selHex);
-});
-qs('#rfBtn').addEventListener('click',async()=>{
-  const b=qs('#rfBtn'); b.classList.add('spin');
-  await load(); b.classList.remove('spin');
 });
 
 
