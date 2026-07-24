@@ -863,27 +863,34 @@ async function fetchView(){
   const nmi=Math.min(Math.round(
     L.latLng(b.getNorth(),b.getWest())
      .distanceTo(L.latLng(b.getSouth(),b.getEast()))/1852/2),250);
-  const mkAttempt=(p)=>p.then(r=>{ if(!r?.ac?.length) throw 0; return r; });
 
-  const attempts=[
-    // adsb.lol — most CORS-friendly community aggregator
-    mkAttempt(getJSON(`https://api.adsb.lol/v2/point/${lat}/${lon}/${nmi}`,7000)
-      .then(d=>({src:'adsb.lol',ac:normADSB(d?.ac,'adsb.lol')}))),
-    // adsb.fi
-    mkAttempt(getJSON(`https://api.adsb.fi/v1/lat/${lat}/lon/${lon}/dist/${nmi}`,7000)
-      .then(d=>({src:'adsb.fi',ac:normADSB(d?.ac,'adsb.fi')}))),
-    // airplanes.live
-    mkAttempt(getJSON(`https://api.airplanes.live/v2/point/${lat}/${lon}/${nmi}`,7000)
-      .then(d=>({src:'airplanes.live',ac:normADSB(d?.ac,'airplanes.live')}))),
+  // Query every free community ADS-B aggregator in parallel and MERGE their
+  // results (deduplicated by hex) instead of racing for just one winner.
+  // Each network is fed by a different set of volunteer receivers, so
+  // combining them surfaces meaningfully more aircraft than any single
+  // source alone — this is the actual fix for "more planes visible".
+  const sources=[
+    ['adsb.lol',       `https://api.adsb.lol/v2/point/${lat}/${lon}/${nmi}`],
+    ['adsb.fi',        `https://api.adsb.fi/v1/lat/${lat}/lon/${lon}/dist/${nmi}`],
+    ['airplanes.live', `https://api.airplanes.live/v2/point/${lat}/${lon}/${nmi}`],
+    ['adsb.one',       `https://api.adsb.one/v2/point/${lat}/${lon}/${nmi}`],
   ];
-  // Route/origin-destination data is resolved separately, per-selected-flight,
-  // via adsbdb.com (see mergeRoute()) rather than raced in here.
 
-  // Hard overall timeout — loader will ALWAYS hide within 12s
-  const timeout=new Promise(res=>setTimeout(()=>res(null),12000));
-  try{
-    return await Promise.race([Promise.any(attempts), timeout]);
-  } catch { return null; }
+  const settled=await Promise.allSettled(
+    sources.map(([name,url])=>getJSON(url,8000).then(d=>({name,ac:normADSB(d?.ac,name)})))
+  );
+
+  const merged=new Map();   // hex -> aircraft, deduplicated across sources
+  const hitSources=[];
+  for(const r of settled){
+    if(r.status!=='fulfilled' || !r.value.ac.length) continue;
+    hitSources.push(r.value.name);
+    for(const ac of r.value.ac){
+      if(!merged.has(ac.hex)) merged.set(ac.hex, ac);
+    }
+  }
+  if(!merged.size) return null;
+  return { src: hitSources.join('+'), ac: Array.from(merged.values()) };
 }
 
 // Fetch single aircraft for tracking
@@ -902,11 +909,12 @@ async function fetchOne(hex){
     };
   };
 
-  // Primary: ICAO hex lookup on 3 APIs simultaneously
+  // Primary: ICAO hex lookup on 4 APIs simultaneously
   const icaoTries=[
     getJSON(`https://api.airplanes.live/v2/icao/${hex}`).then(d=>normRaw(d?.ac?.[0],'airplanes.live')),
     getJSON(`https://api.adsb.fi/v1/icao/${hex}`).then(d=>normRaw(d?.ac?.[0],'adsb.fi')),
     getJSON(`https://api.adsb.lol/v2/icao/${hex}`).then(d=>normRaw(d?.ac?.[0],'adsb.lol')),
+    getJSON(`https://api.adsb.one/v2/hex/${hex}`).then(d=>normRaw(d?.ac?.[0],'adsb.one')),
   ];
   try{
     const r = await Promise.any(icaoTries);
@@ -926,6 +934,10 @@ async function fetchOne(hex){
         const found=(d?.ac||[]).find(a=>a.hex===hex||a.hex===hex.toUpperCase());
         return normRaw(found,'adsb.lol');
       }),
+      getJSON(`https://api.adsb.one/v2/point/${lat}/${lon}/50`).then(d=>{
+        const found=(d?.ac||[]).find(a=>a.hex===hex||a.hex===hex.toUpperCase());
+        return normRaw(found,'adsb.one');
+      }),
     ];
     try{ return await Promise.any(areaTries); }catch{}
   }
@@ -939,6 +951,8 @@ async function fetchCS(cs){
       .then(d=>{if(!d?.ac?.length)throw 0;return normADSB(d.ac,'airplanes.live')}),
     getJSON(`https://api.adsb.lol/v2/callsign/${encodeURIComponent(cs)}`)
       .then(d=>{if(!d?.ac?.length)throw 0;return normADSB(d.ac,'adsb.lol')}),
+    getJSON(`https://api.adsb.one/v2/callsign/${encodeURIComponent(cs)}`)
+      .then(d=>{if(!d?.ac?.length)throw 0;return normADSB(d.ac,'adsb.one')}),
   ];
   try{ return await Promise.any(tries); }catch{ return null; }
 }
