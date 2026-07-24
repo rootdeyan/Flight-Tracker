@@ -215,10 +215,36 @@ header>*{position:relative;z-index:1}
 .filterBody{padding:14px;overflow-y:auto}
 .filterLbl{display:block;font-family:var(--cond);font-size:.7rem;font-weight:700;
   letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:7px}
-#airlineSel{width:100%;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);
-  border-radius:var(--r-sm);color:var(--txt);font-family:var(--sans);font-size:.8rem;
-  padding:8px 10px;outline:none;cursor:pointer;transition:border-color .2s var(--ease)}
-#airlineSel:focus{border-color:var(--cyan)}
+
+/* Custom airline dropdown — native <select> option lists can't be styled
+   to match a dark theme (they render with OS/browser default colors
+   regardless of page CSS), so this is a fully custom component instead */
+.ddWrap{position:relative}
+.ddBtn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:#0d1428;border:1px solid rgba(255,255,255,.12);
+  border-radius:var(--r-sm);color:var(--txt);font-family:var(--sans);font-size:.82rem;
+  padding:9px 12px;outline:none;cursor:pointer;transition:border-color .2s var(--ease);text-align:left}
+.ddBtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ddBtn i{color:var(--dim);font-size:.7rem;flex-shrink:0;transition:transform .2s var(--ease)}
+.ddBtn:hover{border-color:var(--cyan)}
+#airlineDD:has(.ddList:not(.shut)) .ddBtn{border-color:var(--cyan)}
+#airlineDD:has(.ddList:not(.shut)) .ddBtn i{transform:rotate(180deg)}
+.ddList{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:20;
+  background:#0b1120;border:1px solid rgba(255,255,255,.14);border-radius:var(--r-sm);
+  box-shadow:0 16px 40px rgba(0,0,0,.55);overflow:hidden;
+  transform-origin:top;transition:transform .18s var(--ease),opacity .18s var(--ease)}
+.ddList.shut{transform:scaleY(.9);opacity:0;pointer-events:none}
+#airlineDDSearch{width:100%;background:#070b12;border:none;border-bottom:1px solid rgba(255,255,255,.1);
+  color:var(--txt);font-family:var(--sans);font-size:.8rem;padding:9px 12px;outline:none}
+#airlineDDSearch::placeholder{color:var(--dim)}
+.ddOptions{max-height:220px;overflow-y:auto}
+.ddOptions::-webkit-scrollbar{width:4px}
+.ddOptions::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
+.ddOption{padding:9px 12px;font-size:.8rem;color:var(--txt);cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .12s var(--ease)}
+.ddOption:hover{background:rgba(0,212,255,.1)}
+.ddOption.on{background:rgba(0,212,255,.15);color:var(--cyan);font-weight:500}
+
 .filterChips{display:flex;flex-direction:column;gap:7px}
 .chipBtn{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.03);
   border:1px solid rgba(255,255,255,.08);border-radius:var(--r-sm);color:var(--dim);
@@ -452,7 +478,16 @@ header>*{position:relative;z-index:1}
     </div>
     <div class="filterBody">
       <label class="filterLbl">Airline</label>
-      <select id="airlineSel"><option value="">All Airlines</option></select>
+      <div class="ddWrap" id="airlineDD">
+        <button type="button" class="ddBtn" id="airlineDDBtn">
+          <span id="airlineDDLabel">All Airlines</span>
+          <i class="fa-solid fa-chevron-down"></i>
+        </button>
+        <div class="ddList shut" id="airlineDDList">
+          <input type="text" id="airlineDDSearch" placeholder="Search airline…" autocomplete="off" spellcheck="false"/>
+          <div class="ddOptions" id="airlineDDOptions"></div>
+        </div>
+      </div>
       <label class="filterLbl" style="margin-top:16px">Aircraft Type</label>
       <div class="filterChips">
         <button class="chipBtn" data-cat="heli"><i class="fa-solid fa-helicopter"></i> Helicopters</button>
@@ -927,11 +962,18 @@ function applyFilters(){
   qs('#hAc').textContent=vis.toLocaleString();
 }
 
-function populateAirlineSelect(){
-  const sel=qs('#airlineSel');
-  const entries=Object.entries(AL).sort((a,b)=>a[1].localeCompare(b[1]));
-  sel.innerHTML='<option value="">All Airlines</option>'+
-    entries.map(([icao,name])=>`<option value="${icao}">${name}</option>`).join('');
+let airlineList=[];   // [{icao,name}], sorted, built once from AL
+function buildAirlineList(){
+  airlineList=Object.entries(AL).map(([icao,name])=>({icao,name}))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  renderAirlineOptions(airlineList);
+}
+function renderAirlineOptions(list){
+  const box=qs('#airlineDDOptions');
+  const rows=[{icao:'',name:'All Airlines'},...list];
+  box.innerHTML=rows.map(o=>
+    `<div class="ddOption${o.icao===activeAirlineFilter?' on':''}" data-icao="${o.icao}">${o.name}</div>`
+  ).join('');
 }
 
 // ── AIRCRAFT ICON ────────────────────────────────────────────
@@ -1742,9 +1784,27 @@ qs('#filterBtn').addEventListener('click',()=>{
     if(isNarrowViewport()) qs('#panel').classList.add('shut');   // avoid overlap on phones
   }
 });
-qs('#airlineSel').addEventListener('change',e=>{
-  activeAirlineFilter=e.target.value;
+qs('#airlineDDBtn').addEventListener('click',()=>{
+  qs('#airlineDDList').classList.toggle('shut');
+  if(!qs('#airlineDDList').classList.contains('shut')){
+    qs('#airlineDDSearch').value='';
+    renderAirlineOptions(airlineList);
+    qs('#airlineDDSearch').focus();
+  }
+});
+qs('#airlineDDSearch').addEventListener('input',e=>{
+  const q=e.target.value.trim().toLowerCase();
+  renderAirlineOptions(q?airlineList.filter(o=>o.name.toLowerCase().includes(q)):airlineList);
+});
+qs('#airlineDDOptions').addEventListener('click',e=>{
+  const opt=e.target.closest('.ddOption'); if(!opt) return;
+  activeAirlineFilter=opt.dataset.icao;
+  qs('#airlineDDLabel').textContent=opt.textContent;
+  qs('#airlineDDList').classList.add('shut');
   applyFilters();
+});
+document.addEventListener('click',e=>{
+  if(!qs('#airlineDD').contains(e.target)) qs('#airlineDDList').classList.add('shut');
 });
 qs('.filterChips').addEventListener('click',e=>{
   const btn=e.target.closest('.chipBtn'); if(!btn) return;
@@ -1755,12 +1815,12 @@ qs('.filterChips').addEventListener('click',e=>{
   applyFilters();
 });
 qs('#filterClearBtn').addEventListener('click',()=>{
-  activeAirlineFilter=''; qs('#airlineSel').value='';
+  activeAirlineFilter=''; qs('#airlineDDLabel').textContent='All Airlines';
   activeCategoryFilter.clear();
   qsa('.chipBtn').forEach(b=>b.classList.remove('on'));
   applyFilters();
 });
-populateAirlineSelect();
+buildAirlineList();
 
 // Clicking a favorite selects AND tracks it — startTrack() always calls
 // stopTrack() first, so switching favorites never leaves a stale track running.
