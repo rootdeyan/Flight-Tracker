@@ -401,6 +401,8 @@ header>*{position:relative;z-index:1}
    avoids SMIL <animate> jank from repeated marker icon recreation) */
 .acRing{transform-origin:16px 16px;animation:acPulse 2s ease-in-out infinite}
 @keyframes acPulse{0%,100%{transform:scale(.92);opacity:.85}50%{transform:scale(1.18);opacity:.35}}
+.acRingBadge{position:absolute;inset:-6px;border-radius:50%;border-style:solid;border-width:2px;
+  animation:acPulse 2s ease-in-out infinite;transform-origin:center}
 
 .leaflet-tooltip{
   background:rgba(11,17,32,.95)!important;border:1px solid var(--b1)!important;
@@ -500,7 +502,7 @@ header>*{position:relative;z-index:1}
       <div class="filterChips">
         <button class="chipBtn" data-cat="heli"><i class="fa-solid fa-helicopter"></i> Helicopters</button>
         <button class="chipBtn" data-cat="military"><i class="fa-solid fa-jet-fighter"></i> Military</button>
-        <button class="chipBtn" data-cat="private"><i class="fa-solid fa-plane"></i> Private Jets</button>
+        <button class="chipBtn" data-cat="private"><i class="fa-solid fa-plane-departure"></i> Private Jets</button>
       </div>
       <p class="filterHint">Type filters combine (select several); airline narrows further on top.</p>
     </div>
@@ -1050,8 +1052,10 @@ function mkIcon(ac, sel){
   const emg=ac.emergency&&ac.emergency!=='none';
   const gnd=ac.on_ground;
   const kind=classifyAircraft(ac);
-  const kindCol = kind==='heli' ? '#a78bfa' : kind==='military' ? '#8f9779' : kind==='private' ? '#f472b6' : '#00d4ff';
-  const col = emg ? '#ff4f6a' : sel ? '#00ff9d' : gnd ? '#ffb347' : kindCol;
+
+  if(kind==='heli'||kind==='military'||kind==='private') return mkBadgeIcon(ac,sel,kind,emg,gnd);
+
+  const col = emg ? '#ff4f6a' : sel ? '#00ff9d' : gnd ? '#ffb347' : '#00d4ff';
   const sz  = sel ? 34 : 19;
   const op  = gnd ? 0.6 : 1;
   // A clear pulsing ring — not a glow — marks the actively selected/tracked
@@ -1060,16 +1064,7 @@ function mkIcon(ac, sel){
   // are a known cause of browser jank/unresponsiveness.
   const ring = sel ? `<circle class="acRing" cx="16" cy="16" r="13" stroke="${col}" stroke-width="1.6" fill="none"/>` : '';
 
-  const body = kind==='heli'
-    ? `<g fill="${col}" opacity="${op}" stroke="#070b12" stroke-width=".5" stroke-linejoin="round">
-        <ellipse cx="16" cy="17" rx="4.2" ry="6"/>
-        <rect x="15.3" y="6" width="1.4" height="11"/>
-        <rect x="4" y="15.7" width="24" height="1.2" rx=".6" transform="rotate(0 16 16)"/>
-        <rect x="6" y="6.3" width="20" height="1" rx=".5" transform="rotate(90 16 16.8)"/>
-        <rect x="15.5" y="17" width="1" height="10"/>
-        <rect x="13.5" y="26" width="5" height="1" rx=".5"/>
-      </g>`
-    : `<g fill="${col}" opacity="${op}" stroke="#070b12" stroke-width=".5" stroke-linejoin="round">
+  const body = `<g fill="${col}" opacity="${op}" stroke="#070b12" stroke-width=".5" stroke-linejoin="round">
         <ellipse cx="16" cy="5.5" rx="2.3" ry="3.5"/>
         <rect x="13.7" y="7" width="4.6" height="16" rx="2.3"/>
         <path d="M17.8 13.5 L30 19 L28 20.5 L17.8 17Z"/>
@@ -1087,6 +1082,32 @@ function mkIcon(ac, sel){
     className:'',
     iconSize:[sz,sz], iconAnchor:[sz/2,sz/2]
   });
+}
+
+// Military/helicopter/private-jet markers — real FontAwesome icons in a bold
+// colored circular badge. Deliberately NOT rotated to heading: these are
+// side-view pictograms (unlike the top-down plane silhouette above), so
+// spinning them to "point" a compass direction would just look wrong.
+const BADGE_META={
+  heli:    {icon:'fa-helicopter',      color:'#a78bfa'},
+  military:{icon:'fa-jet-fighter',     color:'#8f9779'},
+  private: {icon:'fa-plane-departure', color:'#f472b6'},
+};
+function mkBadgeIcon(ac,sel,kind,emg,gnd){
+  const meta=BADGE_META[kind];
+  const col = emg ? '#ff4f6a' : sel ? '#00ff9d' : meta.color;
+  const sz  = sel ? 36 : 27;
+  const op  = gnd ? 0.65 : 1;
+  const ring = sel ? `<div class="acRingBadge" style="border-color:${col}"></div>` : '';
+  const html = `<div style="position:relative;width:${sz}px;height:${sz}px;opacity:${op}">
+    ${ring}
+    <div style="width:100%;height:100%;border-radius:50%;background:${col};
+      border:1.5px solid #070b12;box-shadow:0 2px 6px rgba(0,0,0,.55);
+      display:flex;align-items:center;justify-content:center">
+      <i class="fa-solid ${meta.icon}" style="color:#070b12;font-size:${Math.round(sz*0.5)}px"></i>
+    </div>
+  </div>`;
+  return L.divIcon({html, className:'', iconSize:[sz,sz], iconAnchor:[sz/2,sz/2]});
 }
 
 // ── API LAYER ────────────────────────────────────────────────
