@@ -22,24 +22,27 @@
 }
 *,::before,::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:var(--sans)}
-body{display:flex;flex-direction:column}
+body{position:relative}
 
-/* HEADER */
-header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
-  display:flex;align-items:center;gap:12px;padding:0 16px;
-  flex-shrink:0;z-index:1000;position:relative}
-.logo{display:flex;align-items:center;gap:8px;flex-shrink:0;user-select:none}
+/* HEADER — floating glass bar over the map */
+header{position:fixed;top:14px;left:14px;right:14px;height:auto;
+  background:rgba(11,17,32,.72);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid rgba(255,255,255,.07);border-radius:var(--r-lg);
+  box-shadow:0 12px 32px rgba(0,0,0,.4);
+  display:flex;align-items:center;gap:12px;padding:11px 18px;
+  flex-shrink:0;z-index:1200}
+.logo{display:flex;align-items:center;gap:9px;flex-shrink:0;user-select:none}
 .logo svg{width:26px;height:26px}
 .logo-name{font-family:var(--cond);font-weight:700;font-size:1.15rem;
   letter-spacing:3px;text-transform:uppercase;color:var(--cyan);white-space:nowrap}
 .logo-name em{color:var(--dimm);font-style:normal;font-weight:400;font-size:.72rem;letter-spacing:1.5px;margin-left:2px}
-.hdiv{width:1px;height:22px;background:var(--b1);flex-shrink:0}
+.hdiv{width:1px;height:22px;background:rgba(255,255,255,.08);flex-shrink:0}
 
 /* Search */
 .srch{position:relative;flex:1;max-width:300px}
 .si{position:absolute;left:10px;top:50%;transform:translateY(-50%);
   color:var(--dim);pointer-events:none;display:flex}
-#sIn{width:100%;background:var(--bg);border:1px solid var(--b1);border-radius:var(--r-pill);
+#sIn{width:100%;background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-pill);
   color:var(--txt);font-family:var(--mono);font-size:.78rem;letter-spacing:1.5px;
   padding:7px 30px 7px 32px;outline:none;transition:border-color .25s var(--ease),box-shadow .25s var(--ease);text-transform:uppercase}
 #sIn::placeholder{color:var(--dim)}
@@ -54,8 +57,8 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 /* Stats */
 .hstats{display:flex;gap:16px;margin-left:auto;align-items:center}
 .livepill{display:flex;align-items:center;gap:6px;
-  background:rgba(0,255,157,.05);border:1px solid rgba(0,255,157,.18);
-  border-radius:20px;padding:3px 10px;
+  background:rgba(0,255,157,.06);border:1px solid rgba(0,255,157,.2);
+  border-radius:var(--r-pill);padding:3px 10px;
   font-family:var(--cond);font-size:.7rem;font-weight:600;
   letter-spacing:1.5px;color:var(--green)}
 .ldot{width:6px;height:6px;border-radius:50%;background:var(--green);
@@ -66,19 +69,25 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 .hst b{color:var(--txt)}
 
 /* Refresh */
-#rfBtn{background:none;border:1px solid var(--b1);border-radius:var(--r-sm);
-  color:var(--dim);cursor:pointer;padding:5px 11px;
+#rfBtn{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-pill);
+  color:var(--dim);cursor:pointer;padding:6px 13px;
   font-family:var(--mono);font-size:.67rem;letter-spacing:1px;
   display:flex;align-items:center;gap:5px;transition:all .2s var(--ease);flex-shrink:0}
-#rfBtn:hover{border-color:var(--cyan);color:var(--cyan)}
+#rfBtn:hover{border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.06)}
 #rfBtn.spin svg{animation:spinA .6s linear infinite}
 @keyframes spinA{to{transform:rotate(360deg)}}
 
-/* LAYOUT */
-.layout{display:flex;flex:1;overflow:hidden;position:relative}
+/* LAYOUT — map fills the whole viewport; header/panel float on top of it */
+.layout{position:relative;height:100vh;overflow:hidden}
 
 /* MAP */
-#map{flex:1;position:relative}
+#map{position:absolute;inset:0}
+.leaflet-control-zoom{border:none!important;border-radius:var(--r-md)!important;overflow:hidden;
+  box-shadow:0 6px 20px rgba(0,0,0,.4)!important}
+.leaflet-control-zoom a{border-radius:0!important}
+.leaflet-control-zoom a:first-child{border-top-left-radius:var(--r-md)!important;border-top-right-radius:var(--r-md)!important}
+.leaflet-control-zoom a:last-child{border-top:1px solid var(--b1)!important;
+  border-bottom-left-radius:var(--r-md)!important;border-bottom-right-radius:var(--r-md)!important}
 
 /* RADAR CROSSHAIR CURSOR */
 .leaflet-container,.leaflet-grab,.leaflet-dragging .leaflet-grab{
@@ -93,7 +102,7 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 .mb{position:absolute;z-index:900;pointer-events:none;
   background:rgba(11,17,32,.92);border:1px solid var(--b1);border-radius:var(--r-sm);
   padding:6px 11px;font-family:var(--mono);font-size:.67rem;color:var(--dim)}
-#cntB{bottom:10px;left:10px}
+#cntB{bottom:80px;left:14px}
 #cntB b{color:var(--cyan)}
 #srcB{bottom:10px;left:50%;transform:translateX(-50%);color:var(--dimm);display:none}
 #errB{top:10px;left:50%;transform:translateX(-50%);
@@ -111,14 +120,15 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
   border-radius:50%;animation:spinA .9s linear infinite}
 .llbl{font-family:var(--mono);font-size:.7rem;letter-spacing:2px;color:var(--dim)}
 
-/* SIDE PANEL */
-#panel{width:335px;flex-shrink:0;
+/* SIDE PANEL — floating glass card over the map */
+#panel{position:fixed;top:88px;right:14px;bottom:14px;width:340px;
   background:color-mix(in srgb, var(--panel) calc(var(--panel-alpha)*100%), transparent);
   backdrop-filter:blur(var(--panel-blur));-webkit-backdrop-filter:blur(var(--panel-blur));
-  border-left:1px solid var(--b1);border-top-left-radius:var(--r-lg);
-  display:flex;flex-direction:column;overflow:hidden;
-  transition:width .3s var(--ease),background .25s var(--ease)}
-#panel.shut{width:0}
+  border:1px solid rgba(255,255,255,.07);border-radius:var(--r-lg);
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+  display:flex;flex-direction:column;overflow:hidden;z-index:900;
+  transition:transform .35s var(--ease),opacity .3s var(--ease),background .25s var(--ease)}
+#panel.shut{transform:translateX(16px) scale(.98);opacity:0;pointer-events:none}
 
 /* Transparency toggle */
 #trBtn{background:none;border:1px solid var(--b1);border-radius:var(--r-pill);
@@ -265,10 +275,10 @@ header{height:52px;background:var(--panel);border-bottom:1px solid var(--b1);
 .leaflet-tooltip::before{display:none!important}
 
 @media(max-width:620px){
-  #panel{position:absolute;right:0;top:52px;bottom:0;z-index:800;
-    width:min(335px,100vw)!important}
+  #panel{left:10px;right:10px;top:84px;bottom:10px;width:auto}
   .hstats{display:none}
   .srch{max-width:155px}
+  header{left:10px;right:10px;top:10px;padding:9px 14px}
 }
 </style>
 </head>
@@ -634,7 +644,8 @@ let allAirports=null;       // full mwgg/Airports dataset, lazy-loaded
 
 // ── MAP ─────────────────────────────────────────────────────
 function initMap(){
-  map = L.map('map',{center:[48,12],zoom:5,zoomControl:true});
+  map = L.map('map',{center:[48,12],zoom:5,zoomControl:false});
+  L.control.zoom({position:'bottomleft'}).addTo(map);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
     attribution:'© <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>',maxZoom:18
   }).addTo(map);
@@ -941,10 +952,8 @@ function openPanel(ac){
   qs('#emp').style.display='none';
   qs('#det').style.display='flex';
   qs('#panel').classList.remove('shut');
-  fillPanel(ac);
+  fillPanel(ac);   // fillRoute() inside this self-triggers the route lookup
   doPhoto(ac.hex);
-  // Trigger route data fetch immediately on select
-  mergeRoute(ac.hex);
 }
 
 function fillPanel(ac){
@@ -1005,21 +1014,33 @@ function haversineKm(lat1,lon1,lat2,lon2){
 }
 
 function fillRoute(ac){
-  // Prefer rich route data from adsbdb (has full name/city/coords for ANY
-  // airport, not just our hardcoded major-hub list); fall back to whatever
-  // orig/dest IATA the ADS-B feed itself supplied.
-  const ro=ac.routeOrig, rd=ac.routeDest;
+  const cs=(ac.flight||'').trim().toUpperCase();
+  const r = cs ? routeCache[cs] : null;
+
+  // Never looked up yet for this callsign — fetch once in the background,
+  // then re-render whatever's still showing it. Keyed by callsign (not
+  // stored on the aircraft object) so it survives the aircraft object being
+  // replaced by the next 10s refresh cycle before the lookup finishes.
+  if(cs && r===undefined){
+    fetchRoute(cs).then(()=>{
+      const latest=cache[ac.hex]||ac;
+      if(selHex===ac.hex) fillPanel(latest);
+      if(trkHex===ac.hex) drawRoute(latest);
+    });
+  }
+
+  const ro=r?.origin, rd=r?.destination;
   const orig=ro?.iata_code||ac.orig_iata, dest=rd?.iata_code||ac.dest_iata;
 
   const fromCode=qs('#dFrom'), fromCity=qs('#dFromC');
   if(orig){ fromCode.textContent=orig; fromCode.className='rcode active';
     fromCity.textContent=ro?`${ro.municipality||''}${ro.municipality&&ro.country_name?', ':''}${ro.country_name||''}`:(APT[orig]||''); }
-  else    { fromCode.textContent='—';  fromCode.className='rcode'; fromCity.textContent=''; }
+  else    { fromCode.textContent=(cs&&r===undefined)?'···':'—';  fromCode.className='rcode'; fromCity.textContent=''; }
 
   const toCode=qs('#dTo'), toCity=qs('#dToC');
   if(dest){ toCode.textContent=dest; toCode.className='rcode active';
     toCity.textContent=rd?`${rd.municipality||''}${rd.municipality&&rd.country_name?', ':''}${rd.country_name||''}`:(APT[dest]||''); }
-  else    { toCode.textContent='—';  toCode.className='rcode'; toCity.textContent=''; }
+  else    { toCode.textContent=(cs&&r===undefined)?'···':'—';  toCode.className='rcode'; toCity.textContent=''; }
 
   // Live status line
   const eta=qs('#dEta');
@@ -1048,11 +1069,12 @@ function fillRoute(ac){
 
 function getAirline(ac){
   if(ac.ownOp) return ac.ownOp;
-  const cs=(ac.flight||'').trim();
+  const cs=(ac.flight||'').trim().toUpperCase();
   if(cs.length>=3){
-    return AL[cs.substring(0,3).toUpperCase()]||AL[cs.substring(0,2).toUpperCase()]||null;
+    const known=AL[cs.substring(0,3).toUpperCase()]||AL[cs.substring(0,2).toUpperCase()];
+    if(known) return known;
   }
-  return null;
+  return routeCache[cs]?.airline||null;
 }
 
 function closePanel(){
@@ -1101,10 +1123,9 @@ function startTrack(hex){
   setTrkBtn(true);
   addLog(`Tracking ${(cache[hex]?.flight||hex).trim().toUpperCase()}`,'hi');
   if(cache[hex]){
-    drawRoute(cache[hex]);
+    drawRoute(cache[hex]);   // self-triggers the route lookup if not yet cached
     if(cache[hex].lat!=null) trackPath.push([cache[hex].lat,cache[hex].lon]);
     drawTrail();
-    if(!cache[hex].routeOrig && !cache[hex].routeDest) mergeRoute(hex);
   }
   trackTmr=setInterval(pollTrack, TRK_INT);
   pollTrack();
@@ -1121,8 +1142,13 @@ function stopTrack(){
 // Dashed projected line: origin airport ──── [plane] ──── destination airport
 function drawRoute(ac){
   if(routeLine){ map.removeLayer(routeLine); routeLine=null; }
-  const oc=ac.routeOrig ? [ac.routeOrig.latitude,ac.routeOrig.longitude] : APT_COORDS[ac.orig_iata];
-  const dc=ac.routeDest ? [ac.routeDest.latitude,ac.routeDest.longitude] : APT_COORDS[ac.dest_iata];
+  const cs=(ac.flight||'').trim().toUpperCase();
+  const r = cs ? routeCache[cs] : null;
+  if(cs && r===undefined){
+    fetchRoute(cs).then(()=>{ if(trkHex===ac.hex) drawRoute(cache[ac.hex]||ac); });
+  }
+  const oc=r?.origin ? [r.origin.latitude,r.origin.longitude] : APT_COORDS[ac.orig_iata];
+  const dc=r?.destination ? [r.destination.latitude,r.destination.longitude] : APT_COORDS[ac.dest_iata];
   if(!oc && !dc) return;
   const pts=[];
   if(oc) pts.push(L.latLng(oc[0],oc[1]));
@@ -1161,15 +1187,13 @@ async function pollTrack(){
   const ac=await fetchOne(trkHex);
   if(!ac){ addLog('No signal — out of ADS-B coverage.','wn'); return; }
 
-  // Preserve route data already resolved via adsbdb (the live tracking API
-  // itself carries no route info)
+  // Preserve orig/dest IATA codes if the live tracking API omits them
+  // (route origin/destination itself is resolved independently by callsign
+  // in fillRoute()/drawRoute(), so it survives this object being replaced)
   const prevCached=cache[ac.hex];
   if(!ac.orig_iata&&prevCached?.orig_iata) ac.orig_iata=prevCached.orig_iata;
   if(!ac.dest_iata&&prevCached?.dest_iata) ac.dest_iata=prevCached.dest_iata;
-  if(prevCached?.routeOrig) ac.routeOrig=prevCached.routeOrig;
-  if(prevCached?.routeDest) ac.routeDest=prevCached.routeDest;
   cache[ac.hex]=ac;
-  if(!ac.routeOrig && !ac.routeDest && ac.flight) mergeRoute(ac.hex);
 
   if(selHex===ac.hex) fillPanel(ac);
   if(markers[ac.hex] && ac.lat!=null)
@@ -1262,7 +1286,7 @@ qs('#trBtn').addEventListener('click',()=>{
   applyPanelTransparency();
 });
 function applyPanelTransparency(){
-  qs('#panel').style.setProperty('--panel-alpha', panelTransparent?'0.55':'0.94');
+  qs('#panel').style.setProperty('--panel-alpha', panelTransparent?'0.28':'0.9');
   qs('#trBtn').classList.toggle('on', panelTransparent);
 }
 applyPanelTransparency();
@@ -1297,18 +1321,6 @@ async function fetchRoute(callsign){
       airline:fr.airline?.name||null,
     };
   }catch(e){ console.warn('adsbdb lookup failed',cs,e); return null; } // don't cache network errors — retry next time
-}
-
-async function mergeRoute(hex){
-  const ac=cache[hex];
-  if(!ac||!ac.flight) return;
-  const r=await fetchRoute(ac.flight);
-  if(!r) return;
-  if(cache[hex]!==ac) return;   // aircraft data changed underneath us
-  ac.routeOrig=r.origin; ac.routeDest=r.destination;
-  if(r.airline&&!ac.ownOp) ac.ownOp=r.airline;
-  if(selHex===hex) fillPanel(ac);
-  if(trkHex===hex) drawRoute(ac);
 }
 
 // ── MAIN LOOP ────────────────────────────────────────────────
