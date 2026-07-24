@@ -8,14 +8,14 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
-<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow:wght@300;400;600;700&family=Barlow+Condensed:wght@400;600;700&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet"/>
 <style>
 :root{
   --bg:#070b12;--panel:#0b1120;--p2:#0d1428;
   --b1:#17243a;--b2:#1e2f4a;
   --cyan:#00d4ff;--green:#00ff9d;--amber:#ffb347;--red:#ff4f6a;
   --txt:#b8d0ee;--dim:#3b5272;--dimm:#56739e;
-  --mono:'Share Tech Mono',monospace;--sans:'Barlow',sans-serif;--cond:'Barlow Condensed',sans-serif;
+  --mono:'Share Tech Mono',monospace;--sans:'Roboto',sans-serif;--cond:'Roboto',sans-serif;
   --r-sm:8px;--r-md:12px;--r-lg:16px;--r-pill:999px;
   --ease:cubic-bezier(.4,0,.2,1);
   --panel-alpha:0.94;--panel-blur:18px;
@@ -102,10 +102,14 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
 
 /* Map badges */
 .mb{position:absolute;z-index:900;pointer-events:none;
-  background:rgba(11,17,32,.92);border:1px solid var(--b1);border-radius:var(--r-sm);
-  padding:6px 11px;font-family:var(--mono);font-size:.67rem;color:var(--dim)}
-#cntB{top:88px;left:14px;bottom:auto}
+  background:rgba(11,17,32,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,.07);border-radius:var(--r-md);
+  box-shadow:0 8px 24px rgba(0,0,0,.3);
+  padding:9px 13px;font-family:var(--mono);font-size:.67rem;color:var(--dim)}
+#cntB{top:80px;left:14px;bottom:auto;display:flex;flex-direction:column;gap:5px}
 #cntB b{color:var(--cyan)}
+.cooldown{font-size:.64rem;color:var(--dimm);letter-spacing:.5px}
+.cooldown b{color:var(--txt);font-weight:400}
 #srcB{bottom:10px;left:50%;transform:translateX(-50%);color:var(--dimm);display:none}
 #errB{top:10px;left:50%;transform:translateX(-50%);
   color:var(--amber);border-color:rgba(255,179,71,.28);display:none;
@@ -134,7 +138,7 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
 /* Constant readability floor — even at max transparency, text still sits on
    a legible dark wash rather than whatever map colors happen to be behind it */
 #panel::before{content:'';position:absolute;inset:0;pointer-events:none;
-  background:rgba(4,7,13,.45);z-index:0}
+  background:rgba(4,7,13,.6);z-index:0}
 #panel>*{position:relative;z-index:1}
 
 /* Transparency toggle */
@@ -142,6 +146,48 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
   color:var(--dim);cursor:pointer;width:24px;height:24px;display:flex;align-items:center;
   justify-content:center;font-size:.68rem;transition:all .2s var(--ease);flex-shrink:0}
 #trBtn:hover,#trBtn.on{border-color:var(--cyan);color:var(--cyan)}
+
+/* Favorites header button */
+#favBtn{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:var(--r-pill);
+  color:var(--dim);cursor:pointer;width:32px;height:32px;display:flex;align-items:center;justify-content:center;
+  transition:all .2s var(--ease);flex-shrink:0}
+#favBtn:hover,#favBtn.on{border-color:var(--amber);color:var(--amber);background:rgba(255,179,71,.08)}
+
+/* Favorite star toggle inside flight hero */
+#favToggle{background:none;border:none;color:var(--dim);cursor:pointer;font-size:1rem;
+  padding:2px 4px;flex-shrink:0;transition:all .2s var(--ease)}
+#favToggle:hover{color:var(--amber);transform:scale(1.15)}
+#favToggle.on{color:var(--amber)}
+
+/* Favorites / History floating panel */
+#favPanel{position:fixed;top:170px;left:14px;bottom:14px;width:270px;
+  background:color-mix(in srgb, var(--panel) 85%, transparent);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.07);border-radius:var(--r-lg);
+  box-shadow:0 20px 60px rgba(0,0,0,.45);
+  display:flex;flex-direction:column;overflow:hidden;z-index:850;
+  transition:transform .3s var(--ease),opacity .25s var(--ease)}
+#favPanel.shut{transform:translateX(-16px) scale(.98);opacity:0;pointer-events:none}
+.favSecHdr{padding:10px 14px 7px;font-family:var(--cond);font-size:.63rem;font-weight:700;
+  letter-spacing:2px;text-transform:uppercase;color:var(--dim);
+  border-bottom:1px solid var(--b1);flex-shrink:0;
+  display:flex;justify-content:space-between;align-items:center}
+.favSecHdr button{background:none;border:none;color:var(--dim);cursor:pointer;font-size:.7rem;padding:2px}
+.favSecHdr button:hover{color:var(--red)}
+.favList{flex-shrink:0;max-height:33%;overflow-y:auto;display:flex;flex-direction:column}
+.favList:last-of-type{flex:1;max-height:none}
+.favList::-webkit-scrollbar{width:3px}
+.favList::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
+.favEmpty{padding:14px;font-size:.7rem;color:var(--dim);font-style:italic;text-align:center}
+.favRow{padding:8px 14px;display:flex;justify-content:space-between;align-items:center;gap:8px;
+  cursor:pointer;transition:background .15s var(--ease);border-bottom:1px solid rgba(23,36,58,.4)}
+.favRow:hover{background:rgba(0,212,255,.06)}
+.favRowTxt{font-family:var(--mono);font-size:.72rem;color:var(--txt);letter-spacing:1px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.favRowSub{font-size:.62rem;color:var(--dim);margin-top:1px}
+.favRowRm{background:none;border:none;color:var(--dim);cursor:pointer;font-size:.72rem;
+  padding:3px;flex-shrink:0}
+.favRowRm:hover{color:var(--red)}
 
 /* Empty */
 .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -176,7 +222,7 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
 .b-op{background:rgba(0,255,157,.06);color:var(--green);border:1px solid rgba(0,255,157,.2);font-weight:400}
 
 /* Scroll body */
-.pscr{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.pscr{flex:1;overflow:hidden;display:flex;flex-direction:column;min-height:0}
 .pscr::-webkit-scrollbar{width:3px}
 .pscr::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
 
@@ -230,6 +276,7 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
 .clbl{font-family:var(--cond);font-size:.62rem;font-weight:700;
   letter-spacing:2px;text-transform:uppercase;color:var(--dim)}
 .cval{font-family:var(--mono);font-size:.95rem;color:var(--txt);margin-top:3px}
+.u{margin-left:4px;color:var(--dim);font-size:.78em}
 .cval .u{font-size:.6rem;color:var(--dim);margin-left:1px}
 .cval.sm{font-size:.8rem}
 .up{color:var(--green)}.dn{color:var(--amber)}
@@ -246,7 +293,9 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
 #trkBtn.on:hover{background:rgba(0,255,157,.13)}
 
 /* Log */
-.log{flex:1;display:flex;flex-direction:column;min-height:0}
+.log{flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto}
+.log::-webkit-scrollbar{width:3px}
+.log::-webkit-scrollbar-thumb{background:var(--b1);border-radius:2px}
 .lhdr{padding:9px 14px 7px;font-family:var(--cond);font-size:.63rem;font-weight:700;
   letter-spacing:2px;text-transform:uppercase;color:var(--dim);
   border-bottom:1px solid var(--b1);flex-shrink:0;
@@ -299,7 +348,7 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
   <div class="hdiv"></div>
   <div class="srch">
     <span class="si"><i class="fa-solid fa-magnifying-glass" style="font-size:.72rem"></i></span>
-    <input id="sIn" type="text" placeholder="CALLSIGN / REG / HEX…" maxlength="12" autocomplete="off" spellcheck="false"/>
+    <input id="sIn" type="text" placeholder="Enter flight number" maxlength="12" autocomplete="off" spellcheck="false"/>
     <button id="sCl"><i class="fa-solid fa-xmark"></i></button>
   </div>
   <div class="hstats">
@@ -308,6 +357,9 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
     <div class="hst">UPDATED&nbsp;<b id="hTime">—</b></div>
     <div class="hst" id="hSrc" style="opacity:.6"></div>
   </div>
+  <button id="favBtn" title="Favorites & recent searches">
+    <i class="fa-solid fa-star" style="font-size:.72rem"></i>
+  </button>
   <button id="rfBtn">
     <i class="fa-solid fa-arrows-rotate" style="font-size:.72rem"></i>
     REFRESH
@@ -317,11 +369,24 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
 <div class="layout">
   <div id="map">
     <div id="ldr"><div class="lring"></div><div class="llbl">ACQUIRING AIRCRAFT…</div></div>
-    <div class="mb" id="cntB">Showing <b id="visCnt">0</b> aircraft</div>
+    <div class="mb" id="cntB">
+      <div>Showing <b id="visCnt">0</b> aircraft</div>
+      <div class="cooldown">Next refresh in <b id="rfCd">—</b></div>
+    </div>
     <div class="mb" id="srcB"></div>
     <div class="mb" id="errB" style="display:none">
       <div class="errSpinner"></div>Retrying connection…
     </div>
+  </div>
+
+  <div id="favPanel" class="shut">
+    <div class="favSecHdr"><span>Favorites</span></div>
+    <div class="favList" id="favList"></div>
+    <div class="favSecHdr">
+      <span>Recent Searches</span>
+      <button id="histClrBtn" title="Clear history"><i class="fa-solid fa-trash-can"></i></button>
+    </div>
+    <div class="favList" id="histList"></div>
   </div>
 
   <div id="panel" class="shut">
@@ -347,7 +412,10 @@ header{position:fixed;top:14px;left:14px;right:14px;height:auto;
       </div>
 
       <div class="hero">
-        <div id="dCs">————</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <div id="dCs">————</div>
+          <button id="favToggle" title="Add to favorites"><i class="fa-regular fa-star"></i></button>
+        </div>
         <div id="dSub">HEX: —— · REG: —— · TYPE: ——</div>
         <div class="badges" id="dBadges">
           <div id="bSt" class="badge b-unk">● Unknown</div>
@@ -642,11 +710,14 @@ let refreshTmr=null, trackTmr=null, lastTrkSt=null;
 let searchQ='', failCount=0, currentSrc='';
 let routeLine=null, aptLayerGroup=null, followMode=false;
 let loadInFlight=false, mergeInFlight=false, pollInFlight=false, loadCycle=0;
+let lastRefreshAt=Date.now();
 const photoCache={};
 const takeoffTimes={};      // hex -> Date, only set from what we personally observed
 const routeCache={};        // callsign -> adsbdb route response (or null)
 let trackPath=[], trailLine=null;   // actual traveled trail while tracking
 let panelTransparent=localStorage.getItem('rtdn_panelTransparent')==='1';
+let favorites={}; try{ favorites=JSON.parse(localStorage.getItem('rtdn_favorites')||'{}'); }catch{ favorites={}; }
+let searchHistory=[]; try{ searchHistory=JSON.parse(localStorage.getItem('rtdn_history')||'[]'); }catch{ searchHistory=[]; }
 let allAirports=null;       // full mwgg/Airports dataset, lazy-loaded
 
 // ── MAP ─────────────────────────────────────────────────────
@@ -911,6 +982,7 @@ function renderAll(result){
     if(!ac.dest_iata&&cache[ac.hex]?.dest_iata) ac.dest_iata=cache[ac.hex].dest_iata;
     cache[ac.hex]=ac;
     vis++;
+    if(ac.on_ground) pruneHistoryIfLanded(ac);
 
     const isSel=ac.hex===selHex;
     const emg=ac.emergency&&ac.emergency!=='none';
@@ -1007,6 +1079,7 @@ function fillPanel(ac){
 
   qs('#dType').textContent=ac.desc||ac.t||'—';
   qs('#dSqk').textContent=ac.squawk||'—';
+  setFavToggleState(ac.hex);
 }
 
 // ── UNIT CONVERSIONS ─────────────────────────────────────────
@@ -1082,6 +1155,60 @@ function getAirline(ac){
     if(known) return known;
   }
   return routeCache[cs]?.airline||null;
+}
+
+// ── FAVORITES & HISTORY (persisted in localStorage) ─────────────
+// Favorites are keyed by hex (ICAO24) — a specific airframe, permanent.
+// History is keyed by callsign — a specific flight, transient, pruned once
+// we observe that flight on the ground again.
+function saveFavorites(){ localStorage.setItem('rtdn_favorites', JSON.stringify(favorites)); }
+function saveHistory(){ localStorage.setItem('rtdn_history', JSON.stringify(searchHistory)); }
+
+function recordHistory(ac){
+  const flight=(ac.flight||'').trim().toUpperCase();
+  if(!flight) return;
+  searchHistory=searchHistory.filter(h=>h.flight!==flight);
+  searchHistory.unshift({flight, hex:ac.hex, r:ac.r||'', at:Date.now()});
+  if(searchHistory.length>20) searchHistory.length=20;
+  saveHistory();
+  renderFavPanel();
+}
+
+function pruneHistoryIfLanded(ac){
+  const flight=(ac.flight||'').trim().toUpperCase();
+  const before=searchHistory.length;
+  searchHistory=searchHistory.filter(h=>!(h.flight===flight||h.hex===ac.hex));
+  if(searchHistory.length!==before){ saveHistory(); renderFavPanel(); }
+}
+
+function toggleFavorite(hex){
+  const ac=cache[hex]; if(!ac) return;
+  if(favorites[hex]) delete favorites[hex];
+  else favorites[hex]={hex, flight:(ac.flight||'').trim().toUpperCase(), r:ac.r||'', t:ac.t||'', savedAt:Date.now()};
+  saveFavorites();
+  renderFavPanel();
+  setFavToggleState(hex);
+}
+function setFavToggleState(hex){
+  const on=!!favorites[hex];
+  const btn=qs('#favToggle');
+  btn.classList.toggle('on', on);
+  btn.innerHTML=on?'<i class="fa-solid fa-star"></i>':'<i class="fa-regular fa-star"></i>';
+}
+
+function renderFavPanel(){
+  const favArr=Object.values(favorites).sort((a,b)=>b.savedAt-a.savedAt);
+  qs('#favList').innerHTML=favArr.length?favArr.map(f=>`
+    <div class="favRow" data-hex="${f.hex}" data-flight="${f.flight}">
+      <div><div class="favRowTxt">${f.flight||f.hex.toUpperCase()}</div><div class="favRowSub">${f.r||f.hex.toUpperCase()}</div></div>
+      <button class="favRowRm" data-rmhex="${f.hex}"><i class="fa-solid fa-xmark"></i></button>
+    </div>`).join(''):'<div class="favEmpty">No favorites yet — open a flight and tap the star.</div>';
+
+  qs('#histList').innerHTML=searchHistory.length?searchHistory.map(h=>`
+    <div class="favRow" data-hex="${h.hex}" data-flight="${h.flight}">
+      <div><div class="favRowTxt">${h.flight}</div><div class="favRowSub">${h.r||''}</div></div>
+      <button class="favRowRm" data-rmflight="${h.flight}"><i class="fa-solid fa-xmark"></i></button>
+    </div>`).join(''):'<div class="favEmpty">No recent searches yet.</div>';
 }
 
 function closePanel(){
@@ -1223,7 +1350,7 @@ async function pollTrack(){
       takeoffTimes[ac.hex]=new Date();
       addLog('✈  Departed — now airborne!','hi');
     }
-    else if(!prev.on_ground&&ac.on_ground) addLog('🛬 Landed — on ground.','hi');
+    else if(!prev.on_ground&&ac.on_ground){ addLog('🛬 Landed — on ground.','hi'); pruneHistoryIfLanded(ac); }
     else if(!ac.on_ground){
       const vr=ac.baro_rate??0;
       const alt=ftToKm(ac.alt_baro??0).toFixed(1);
@@ -1255,31 +1382,38 @@ function addLog(msg,cls=''){
 }
 
 // ── SEARCH ───────────────────────────────────────────────────
+async function performSearch(q){
+  q=(q||'').trim().toUpperCase();
+  if(q.length<2) return false;
+  const hit=Object.values(cache).find(a=>
+    (a.flight||'').trim().toUpperCase().includes(q)||
+    a.hex.toUpperCase().includes(q)||
+    (a.r||'').toUpperCase().includes(q)
+  );
+  if(hit){ selectAc(hit.hex); recordHistory(hit); map.panTo([hit.lat,hit.lon],{animate:true}); return true; }
+  const res=await fetchCS(q);
+  if(res?.length){
+    res.forEach(a=>{if(a.lat!=null){cache[a.hex]=a;
+      if(!markers[a.hex]) markers[a.hex]=L.marker([a.lat,a.lon],
+        {icon:mkIcon(a.track,false,a.on_ground,false)})
+        .addTo(map).bindTooltip((a.flight||a.hex).toUpperCase(),{direction:'top',offset:[0,-8]})
+        .on('click',()=>selectAc(a.hex));
+    }});
+    selectAc(res[0].hex);
+    recordHistory(res[0]);
+    map.flyTo([res[0].lat,res[0].lon],8,{duration:1.2});
+    return true;
+  }
+  toast('Flight not found in current coverage.');
+  return false;
+}
+
 let sTmr=null;
 qs('#sIn').addEventListener('input',e=>{
   searchQ=e.target.value.trim().toUpperCase();
   qs('#sCl').style.display=searchQ?'block':'none';
   clearTimeout(sTmr);
-  sTmr=setTimeout(async()=>{
-    if(searchQ.length<2) return;
-    const hit=Object.values(cache).find(a=>
-      (a.flight||'').trim().toUpperCase().includes(searchQ)||
-      a.hex.toUpperCase().includes(searchQ)||
-      (a.r||'').toUpperCase().includes(searchQ)
-    );
-    if(hit){ selectAc(hit.hex); return; }
-    const res=await fetchCS(searchQ);
-    if(res?.length){
-      res.forEach(a=>{if(a.lat!=null){cache[a.hex]=a;
-        if(!markers[a.hex]) markers[a.hex]=L.marker([a.lat,a.lon],
-          {icon:mkIcon(a.track,false,a.on_ground,false)})
-          .addTo(map).bindTooltip((a.flight||a.hex).toUpperCase(),{direction:'top',offset:[0,-8]})
-          .on('click',()=>selectAc(a.hex));
-      }});
-      selectAc(res[0].hex);
-      map.flyTo([res[0].lat,res[0].lon],8,{duration:1.2});
-    } else toast('Flight not found in current coverage.');
-  },450);
+  sTmr=setTimeout(()=>performSearch(searchQ),450);
 });
 qs('#sCl').addEventListener('click',()=>{
   qs('#sIn').value=''; searchQ=''; qs('#sCl').style.display='none';
@@ -1287,13 +1421,39 @@ qs('#sCl').addEventListener('click',()=>{
 
 // ── EVENTS ───────────────────────────────────────────────────
 qs('#clsBtn').addEventListener('click',closePanel);
+
+qs('#favBtn').addEventListener('click',()=>{
+  const shut=qs('#favPanel').classList.toggle('shut');
+  qs('#favBtn').classList.toggle('on', !shut);
+});
+qs('#favToggle').addEventListener('click',()=>{ if(selHex) toggleFavorite(selHex); });
+qs('#histClrBtn').addEventListener('click',()=>{ searchHistory=[]; saveHistory(); renderFavPanel(); });
+
+function wireFavRowClicks(listId, removeAttr, onRemove){
+  qs(listId).addEventListener('click', e=>{
+    const rmBtn=e.target.closest('.favRowRm');
+    if(rmBtn){ e.stopPropagation(); onRemove(rmBtn.dataset[removeAttr]); return; }
+    const row=e.target.closest('.favRow'); if(!row) return;
+    const hex=row.dataset.hex, flight=row.dataset.flight;
+    if(cache[hex]&&markers[hex]) selectAc(hex);
+    else performSearch(flight||hex);
+  });
+}
+wireFavRowClicks('#favList','rmhex', hex=>{
+  delete favorites[hex]; saveFavorites(); renderFavPanel();
+  if(selHex===hex) setFavToggleState(hex);
+});
+wireFavRowClicks('#histList','rmflight', flight=>{
+  searchHistory=searchHistory.filter(h=>h.flight!==flight); saveHistory(); renderFavPanel();
+});
+renderFavPanel();   // initial paint from localStorage
 qs('#trBtn').addEventListener('click',()=>{
   panelTransparent=!panelTransparent;
   localStorage.setItem('rtdn_panelTransparent', panelTransparent?'1':'0');
   applyPanelTransparency();
 });
 function applyPanelTransparency(){
-  qs('#panel').style.setProperty('--panel-alpha', panelTransparent?'0.28':'0.9');
+  qs('#panel').style.setProperty('--panel-alpha', panelTransparent?'0.45':'0.85');
   qs('#trBtn').classList.toggle('on', panelTransparent);
 }
 applyPanelTransparency();
@@ -1334,6 +1494,7 @@ async function fetchRoute(callsign){
 async function load(){
   if(loadInFlight) return;   // moveend + the 10s interval can otherwise fire together
   loadInFlight=true;
+  lastRefreshAt=Date.now();
   try{
     const result=await fetchView();
     renderAll(result);
@@ -1343,6 +1504,13 @@ async function load(){
     loadInFlight=false;
   }
 }
+
+function tickCooldown(){
+  const remain=Math.max(0, REFRESH-(Date.now()-lastRefreshAt));
+  qs('#rfCd').textContent=Math.ceil(remain/1000)+'s';
+}
+tickCooldown();
+setInterval(tickCooldown, 1000);
 
 async function boot(){
   initMap();
